@@ -84,25 +84,26 @@ def get_adjacent_nodes(i):
          p4_index = [-1]
 
     return [p1_index, p2_index, p3_index, p4_index]
-
-def get_adjacency_list(v_list, obs_list):
-     # print(v_list)
-     v_neigh = g.neighborhood(vertices = v_list)
-     # print(v_neigh[0])
-     resultList = [element for nestedlist in v_neigh for element in nestedlist]
-     # print(resultList)
-     return list(set(resultList) - set(v_list) - set(obs_list))
-
-
     
 g = ig.Graph(n=size)
-
+o = ig.Graph(n=size)
 # graph Generation
 for i in range(size):
      neigh = get_adjacent_nodes(i)
      for j in range(4):
           if neigh[j][0] != -1 and g.are_connected(i,neigh[j][0]) == False:
                g.add_edge(i,neigh[j][0])
+
+v = [0,1,2,4,5, 6,13, 15,7,8]
+for i in v:
+     neigh = get_adjacent_nodes(i)
+     for j in range(4):
+          if neigh[j][0] != -1 and o.are_connected(i,neigh[j][0]) == False and neigh[j][0] in v:
+               o.add_edge(i,neigh[j][0])
+
+
+o.vs["name"] = [ str(i) for i in range(size)]
+o.vs["label"] = o.vs["name"]
 # print(get_adjacency_list([0,1,2],[3,4]))
 # print(g.get_all_shortest_paths(2, to = 7))
 #visited node
@@ -110,34 +111,50 @@ xm = [0]
 ym = [0]
 # print(g.neighborhood(vertices = [7]))
 ## Subgraph function
-obstacle = [3]
+obstacle = [3, 4, 13]
 visited_nodes = [0]
 obstacle_detected = []
-node_pointer = visited_nodes[-1]
-visited = g.subgraph(visited_nodes)
-
+# node_pointer = visited_nodes[-1]
+# visited = g.subgraph(visited_nodes)
+# # visited.add_vertex(6)
+# # add_adjacent_vertex(visited, 6)
+# # add_adjacent_vertex(visited, 7)
+# # print(visited.vs.indices)
 
 while get_adjacency_list(visited_nodes, obstacle_detected) != []:
      min_adj = min(get_adjacency_list(visited_nodes, obstacle_detected))
-     print(min_adj)
+     # print(get_adjacency_list(visited_nodes, obstacle_detected))
+     # print("&&&")
+     # print(visited_nodes[-1])
+     # print(g.get_all_shortest_paths(visited_nodes[-1], to = min_adj))
      # visited.add_vertex(min_adj)
-     l  = g.get_all_shortest_paths(visited_nodes[-1], to = min_adj)
-     print(l)
+     l  = get_req_path(visited_nodes, g.get_all_shortest_paths(visited_nodes[-1], to = min_adj))
+     print(g.get_all_shortest_paths(visited_nodes[-1], to = min_adj))
+     # print(l)
+     # print("-----")
+     k = np.append(l, min_adj)
+     print(k)
+     print(k[-1])
+     # print()
      # visited.delete_vertices(min_adj)
-     if l[0][-1] in obstacle:
-          obstacle_detected.append(l[0][-1])
-          visited_nodes.extend(l[0][1:-1])
+     # if k[-1] in obstacle:
+     if min_adj in obstacle:
+          print("obstacle detected")
+          obstacle_detected.append(k[-1])
+          visited_nodes.extend(k[1:-1])
+          print(k[1:-1])
      else:
-          visited_nodes.extend(l[0][1:])
+          visited_nodes.extend(k[1:])
 
 
-print(visited_nodes)
-print(obstacle_detected)
+# print(visited_nodes)
+# print(obstacle_detected)
 node_coord = [[x[i],y[i]] for i in range(size)]
 visual_style = {}
 visual_style["edge_width"] = [0.5]
 g.vs["vertex_label_dist"] = 10
 layout_subgraph = ig.Layout(coords=node_coord)
+# ig.plot(o, target=ax, layout = layout_subgraph,**visual_style)
 ig.plot(g, target=ax, layout = layout_subgraph,**visual_style)
 plt.plot(x,y,color='blue')
 plt.show()
