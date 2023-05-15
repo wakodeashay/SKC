@@ -1,6 +1,7 @@
 #!/usr/bin/python3.8
 from hilbertcurve.hilbertcurve import HilbertCurve
 import matplotlib.pyplot as plt
+import matplotlib
 import numpy as np
 import igraph as ig
 
@@ -11,7 +12,7 @@ fig, ax = plt.subplots()
 
 # Variables
 # Iteration of Hilbert's curve
-iter = 6
+iter = 4
 # Dimension of Hilber's curve
 dim = 2
 # Number of points in Hilbert's curve
@@ -42,61 +43,45 @@ y = np.array([points[i][1] for i in range(size)])
 
 def get_point_index(xl, yl):
     """Calculates the index of the point on the hilbert's curve"""
-    global x,y
+    global x, y
     x_index = np.where(x == xl)[0]
     y_index = np.where(y == yl)[0]
     return list(np.intersect1d(x_index, y_index))
-
 
 def get_adjacent_nodes(i):
     """Outputs the adjacent nodes of a given node"""
     x_i = x[i]
     y_i = y[i]
 
-    p1_x = x_i + xgrid
-    p1_y = y_i
-    p1_bool = p1_x in x
+    adjacent_points = {
+        "p1": [x_i + xgrid, y_i],
+        "p2": [x_i, y_i + ygrid],
+        "p3": [x_i - xgrid, y_i],
+        "p4": [x_i, y_i - ygrid],
+    }
 
-    p2_x = x_i
-    p2_y = y_i + ygrid
-    p2_bool = p2_y in y
+    adjacent_nodes = [
+        get_point_index(adjacent_points[point][0], adjacent_points[point][1])
+        if adjacent_points[point][0] in x and adjacent_points[point][1] in y
+        else [-1]
+        for point in adjacent_points
+    ]
 
-    p3_x = x_i - xgrid
-    p3_y = y_i
-    p3_bool = p3_x in x
-
-    p4_x = x_i
-    p4_y = y_i - ygrid
-    p4_bool = p4_y in y
-
-    if p1_bool:
-        p1_index = get_point_index(p1_x, p1_y)
-    else:
-        p1_index = [-1]
-
-    if p2_bool:
-        p2_index = get_point_index(p2_x, p2_y)
-    else:
-        p2_index = [-1]
-
-    if p3_bool:
-        p3_index = get_point_index(p3_x, p3_y)
-    else:
-        p3_index = [-1]
-
-    if p4_bool:
-        p4_index = get_point_index(p4_x, p4_y)
-    else:
-        p4_index = [-1]
-
-    return [p1_index, p2_index, p3_index, p4_index]
+    return adjacent_nodes
 
 
 def get_adjacency_list(v_list, obs_list):
     """Gives the Adjacency list"""
+    # v_neigh = g.neighborhood(vertices=v_list)
+    # # resultList = [element for nestedlist in v_neigh for element in nestedlist]
+    # # return list(set(resultList) - set(v_list) - set(obs_list))
+    # return list(n for n in v_neigh if n not in v_list and n not in obs_list)
+    
+    
     v_neigh = g.neighborhood(vertices=v_list)
-    resultList = [element for nestedlist in v_neigh for element in nestedlist]
-    return list(set(resultList) - set(v_list) - set(obs_list))
+    result_set = {v for neigh_list in v_neigh for v in neigh_list} - set(v_list) - set(obs_list)
+    return list(result_set)
+
 
 
 def get_req_path(subgraph_list, l):
@@ -105,9 +90,9 @@ def get_req_path(subgraph_list, l):
     if np.shape(k)[0] == 1:
         return k
     k = k[:, 0:-1]
-
     for i in range(size):
-        if all(item in subgraph_list for item in k[i]):
+        # if all(item in subgraph_list for item in k[i]):
+        if set(k[i]).intersection(subgraph_list) == set(k[i]):
             return k[i]
 
 
@@ -140,7 +125,7 @@ for i in range(size):
 xm = [0]
 ym = [0]
 
-obstacle = np.array([3, 45, 23, 24, 14])
+obstacle = np.array([])
 visited_nodes = np.array([0])
 obstacle_detected = np.array([])
 
@@ -181,7 +166,13 @@ y_visited = [y[i] for i in visited_nodes]
 for i in range(size):
     if i in obstacle_detected:
         rectangle = plt.Rectangle(
-            (x[i] - xgrid / 2, y[i] - ygrid / 2), 1, 1, fc="brown", alpha=0.5, ec="black")
+            (x[i] - xgrid / 2, y[i] - ygrid / 2),
+            1,
+            1,
+            fc="brown",
+            alpha=0.5,
+            ec="black",
+        )
         plt.gca().add_patch(rectangle)
     else:
         rectangle = plt.Rectangle(
@@ -190,7 +181,8 @@ for i in range(size):
             1,
             fc="brown",
             alpha=0.1,
-            ec="black")
+            ec="black",
+        )
         plt.gca().add_patch(rectangle)
 
 node_coord = [[x[i], y[i]] for i in range(size)]
@@ -200,16 +192,11 @@ g.vs["name"] = [str(i) for i in range(size)]
 visual_style["vertex_color"] = "black"
 visual_style["vertex_size"] = [0.1]
 visual_style["edge_width"] = [0.3]
-visual_style["edge_color"] = "grey"
+visual_style["edge_color"] = "skyblue"
 
 layout_subgraph = ig.Layout(coords=node_coord)
 
-ig.plot(
-    g,
-    target=ax,
-    layout=layout_subgraph,
-    **visual_style
-)
+ig.plot(g, target=ax, layout=layout_subgraph, **visual_style)
 
 plt.plot(x_visited, y_visited, linestyle="solid", color="green", linewidth=0.5)
 plt.plot(x, y, linestyle="dotted", linewidth=0.4)
