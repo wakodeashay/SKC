@@ -12,7 +12,7 @@ fig, ax = plt.subplots()
 
 # Variables
 # Iteration of Hilbert's curve
-iter = 4
+iter = 5
 # Dimension of Hilber's curve
 dim = 2
 # Number of points in Hilbert's curve
@@ -125,7 +125,17 @@ for i in range(size):
 xm = [0]
 ym = [0]
 
+# Example 1
 obstacle = np.array([])
+# Example 2
+# obstacle = np.array([])
+# Example 3
+# obstacle = np.array([])
+# Example 4
+# obstacle = np.array([])
+# Example 5
+# obstacle = np.array([])
+
 visited_nodes = np.array([0])
 obstacle_detected = np.array([])
 
@@ -162,6 +172,9 @@ while get_adjacency_list(visited_nodes, obstacle_detected) != []:
 x_visited = [x[i] for i in visited_nodes]
 y_visited = [y[i] for i in visited_nodes]
 
+x_bound = [min(x) - xgrid/2, min(x) - xgrid/2, max(x) + xgrid/2, max(x) + xgrid/2, min(x) - xgrid/2]
+y_bound = [min(y) - ygrid/2, max(y) + ygrid/2, max(y) + ygrid/2, min(y) - ygrid/2, min(y) - ygrid/2]
+
 
 for i in range(size):
     if i in obstacle_detected:
@@ -180,7 +193,7 @@ for i in range(size):
             1,
             1,
             fc="brown",
-            alpha=0.1,
+            alpha=0.04,
             ec="black",
         )
         plt.gca().add_patch(rectangle)
@@ -192,12 +205,12 @@ g.vs["name"] = [str(i) for i in range(size)]
 visual_style["vertex_color"] = "black"
 visual_style["vertex_size"] = [0.1]
 visual_style["edge_width"] = [0.3]
-visual_style["edge_color"] = "skyblue"
-
+visual_style["edge_color"] = "orange"
+# visual_style["edge_style"] = "dotted"
 layout_subgraph = ig.Layout(coords=node_coord)
 
 ig.plot(g, target=ax, layout=layout_subgraph, **visual_style)
-
-plt.plot(x_visited, y_visited, linestyle="solid", color="green", linewidth=0.5)
+plt.plot(x_bound, y_bound, linestyle= "solid", color = "black", linewidth = 0.5)
+plt.plot(x_visited, y_visited, linestyle="solid", color="green", linewidth=0.8)
 plt.plot(x, y, linestyle="dotted", linewidth=0.4)
 plt.show()
