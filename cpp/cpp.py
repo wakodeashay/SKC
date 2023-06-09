@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 import numpy as np
 import igraph as ig
+from numba import njit
 
 # plt.style.use(["ieee"])
 plt.rcParams["figure.dpi"] = 1200
@@ -40,7 +41,7 @@ points = hilbert_curve.points_from_distances(distances)
 x = np.array([points[i][0] for i in range(size)])
 y = np.array([points[i][1] for i in range(size)])
 
-
+@njit
 def get_point_index(xl, yl):
     """Calculates the index of the point on the hilbert's curve"""
     global x, y
