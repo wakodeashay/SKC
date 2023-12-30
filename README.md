@@ -46,6 +46,11 @@ cd {clone location}/SKC
 python3 main.py
 ```
 
+8. Deactivate the conda 
+```
+conda deactivate SKC
+```
+
 File description :
 main.py : contains source code for the project
 Illustrations folder contains illustrations used in the paper
