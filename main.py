@@ -6,10 +6,10 @@ import igraph as ig
 from numba import njit
 import random
 
-plt.rcParams["figure.dpi"] = 1200
+# plt.rcParams["figure.dpi"] = 1200
 
 fig, ax = plt.subplots()
-
+ax.set_aspect('equal', adjustable='box')
 # Variables
 # Iteration of Hilbert's curve
 iter = 4
@@ -217,10 +217,13 @@ visual_style = {}
 g.vs["name"] = [str(i) for i in range(size)]
 
 visual_style["edge_width"] = [0.3]
+visual_style["vertex_size"] = 10
 visual_style["edge_color"] = "orange"
 layout_subgraph = ig.Layout(coords=node_coord)
 
 ig.plot(g, target=ax, layout=layout_subgraph, **visual_style)
-plt.plot(x_bound, y_bound, linestyle="solid", color="black", linewidth=0.2)
-plt.plot(x_visited, y_visited, linestyle="solid", color="green", linewidth=0.3)
+plt.plot(x_visited[0], y_visited[0],  marker="o", markersize=15, markeredgecolor="blue", markerfacecolor="blue")
+plt.plot(x_visited[-1], y_visited[-1],  marker="o", markersize=15, markeredgecolor="gold", markerfacecolor="gold")
+plt.plot(x_bound, y_bound, linestyle="solid", color="black", linewidth=0.5)
+plt.plot(x_visited, y_visited, linestyle="solid", color="green", linewidth=1.0)
 plt.show()
