@@ -12,7 +12,7 @@ fig, ax = plt.subplots()
 ax.set_aspect('equal', adjustable='box')
 # Variables
 # Iteration of Hilbert's curve
-iter = 4
+iter = 3
 # Dimension of Hilber's curve
 dim = 2
 # Number of points in Hilbert's curve
@@ -91,6 +91,18 @@ def get_req_path(subgraph_list, l):
             return k[i]
 
 
+def get_revisit_percentage(x_v, y_v):
+    n  = x_v.size
+    x_y = np.zeros(shape = (n,2))
+    
+    for i in range(n):
+        x_y[i] = (x_v[i],y_v[i])
+
+    unq, count = np.unique(x_y, axis=0, return_counts=True)
+    revisits = [x for x in count if (x>1)]    
+    return (len(revisits)/n)*100
+
+
 def get_subgraph(v):
     """Generates subgraph for vertex list v"""
     o = ig.Graph(n=size)
@@ -141,12 +153,14 @@ def get_sparse_obstacle(start, end, size):
 
 # Non Uniform coverage example
 # Iteration 4
-obstacle = np.array([40, 41, 42, 43, 52, 53, 54, 55, 92, 93, 94, 95, 164, 165, 166, 167, 168, 169,
-                    170, 171, 172, 173, 174, 175, 176, 177, 209, 210, 221, 222, 252, 253, 254, 255, 242, 241, 240])
+# obstacle = np.array([40, 41, 42, 43, 52, 53, 54, 55, 92, 93, 94, 95, 164, 165, 166, 167, 168, 169,
+                    # 170, 171, 172, 173, 174, 175, 176, 177, 209, 210, 221, 222, 252, 253, 254, 255, 242, 241, 240])
 # Iteration 2
 # obstacle = np.array([12, 15])
 # Iteration 1
 # obstacle = np.array([1])
+    
+obstacle = np.array([9,11])
 
 # Initiaize visited_node list with the starting node
 visited_nodes = np.array([0])
@@ -183,6 +197,9 @@ while get_adjacency_list(visited_nodes, obstacle_detected) != []:
 
 x_visited = [x[i] for i in visited_nodes]
 y_visited = [y[i] for i in visited_nodes]
+x_visited = np.array(x_visited)
+y_visited = np.array(y_visited)
+get_revisit_percentage(x_visited, y_visited)
 
 x_bound = [min(x) - xgrid/2, min(x) - xgrid/2, max(x) +
            xgrid/2, max(x) + xgrid/2, min(x) - xgrid/2]
@@ -225,5 +242,6 @@ ig.plot(g, target=ax, layout=layout_subgraph, **visual_style)
 plt.plot(x_visited[0], y_visited[0],  marker="o", markersize=15, markeredgecolor="blue", markerfacecolor="blue")
 plt.plot(x_visited[-1], y_visited[-1],  marker="o", markersize=15, markeredgecolor="gold", markerfacecolor="gold")
 plt.plot(x_bound, y_bound, linestyle="solid", color="black", linewidth=0.5)
+plt.quiver(x_visited[:-1], y_visited[:-1], x_visited[1:]-x_visited[:-1], y_visited[1:]-y_visited[:-1], scale_units='xy', angles='xy', scale=1)
 plt.plot(x_visited, y_visited, linestyle="solid", color="green", linewidth=1.0)
 plt.show()
