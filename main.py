@@ -1,247 +1,270 @@
-#!/usr/bin/python3.8
+#!/usr/bin/python3.11
 from hilbertcurve.hilbertcurve import HilbertCurve
 import matplotlib.pyplot as plt
 import numpy as np
 import igraph as ig
-from numba import njit
 import random
-
-# plt.rcParams["figure.dpi"] = 1200
 
 fig, ax = plt.subplots()
 ax.set_aspect('equal', adjustable='box')
-# Variables
-# Iteration of Hilbert's curve
-iter = 3
-# Dimension of Hilber's curve
-dim = 2
-# Number of points in Hilbert's curve
-size = 2 ** (iter * dim)
-side_size = 2 ** (iter * dim / 2)
-# Area covered by the Hibert's curve
-xmin = 0
-ymin = 0
-xmax = 10 * side_size
-ymax = 10 * side_size
-# Grid size
-xgrid = 1
-ygrid = 1
-# Bounding grid
-xmin_grid = xmin - xgrid / 2
-ymin_grid = ymin - ygrid / 2
-xmax_grid = xmax + xgrid / 2
-ymax_grid = ymax + ygrid / 2
 
-# Creating Hilbert's curve
-hilbert_curve = HilbertCurve(iter, dim)
-distances = list(range(size))
-points = hilbert_curve.points_from_distances(distances)
+class Route:
 
-x = np.array([points[i][0] for i in range(size)])
-y = np.array([points[i][1] for i in range(size)])
+    def __init__(self, iteration, obstacle, start):
+        self.iter = iteration
+        self.obstacle = obstacle
+        self.start = start
 
+        # Visited nodes
+        # Initialize visited_node list with the starting node
+        self.visited_nodes = np.array([self.start])
+        # Initialize detected obstacle array
+        self.obstacle_detected = np.array([])
 
-@njit
-def get_point_index(xl, yl):
-    """Calculates the index of the point on the hilbert's curve"""
-    global x, y
-    x_index = np.where(x == xl)[0]
-    y_index = np.where(y == yl)[0]
-    return list(np.intersect1d(x_index, y_index))
+        # Dimension 
+        self.dim = 2
+        
+        # Number of points in Hilbert's curve
+        self.size = 2 ** (self.iter * self.dim)
+        self.side_size = 2 ** (self.iter * self.dim / 2)
 
+        # Generate Graph
+        self.g = ig.Graph(n=self.size)
 
-def get_adjacent_nodes(i):
-    """Outputs the adjacent nodes of a given node"""
-    x_i = x[i]
-    y_i = y[i]
+        # Area covered by the Hilbert's curve
+        self.xmin = 0
+        self.ymin = 0
+        self.xmax = 10 * self.side_size
+        self.ymax = 10 * self.side_size
+        # Grid size
+        self.xgrid = 1
+        self.ygrid = 1
+        # Bounding grid
+        self.xmin_grid = self.xmin - self.xgrid / 2
+        self.ymin_grid = self.ymin - self.ygrid / 2
+        self.xmax_grid = self.xmax + self.xgrid / 2
+        self.ymax_grid = self.ymax + self.ygrid / 2
 
-    adjacent_points = {
-        "p1": [x_i + xgrid, y_i],
-        "p2": [x_i, y_i + ygrid],
-        "p3": [x_i - xgrid, y_i],
-        "p4": [x_i, y_i - ygrid],
-    }
+        # Creating Hilbert's curve
+        self.hilbert_curve = HilbertCurve(self.iter, self.dim)
+        self.distances = list(range(self.size))
+        self.points = self.hilbert_curve.points_from_distances(self.distances)
 
-    adjacent_nodes = [
-        get_point_index(adjacent_points[point][0], adjacent_points[point][1])
-        if adjacent_points[point][0] in x and adjacent_points[point][1] in y
-        else [-1]
-        for point in adjacent_points
-    ]
+        self.x = np.array([self.points[i][0] for i in range(self.size)])
+        self.y = np.array([self.points[i][1] for i in range(self.size)])
 
-    return adjacent_nodes
+        # Initialize the alternate path suggested
+        self.x_visited = np.array([])
+        self.y_visited = np.array([])
 
 
-def get_adjacency_list(v_list, obs_list):
-    """Gives the Adjacency list"""
-    v_neigh = g.neighborhood(vertices=v_list)
-    result_set = {v for neigh_list in v_neigh for v in neigh_list} - \
-        set(v_list) - set(obs_list)
-    return list(result_set)
+    def get_point_index(self, xl, yl):
+        """Calculates the index of the point on the hilbert's curve"""
+        x_index = np.where(self.x == xl)[0]
+        y_index = np.where(self.y == yl)[0]
+        return list(np.intersect1d(x_index, y_index))
 
 
-def get_req_path(subgraph_list, l):
-    """Gives the smallest path present within the subgraph"""
-    k = np.array(l)
-    if np.shape(k)[0] == 1:
-        return k
-    k = k[:, 0:-1]
-    for i in range(size):
-        if set(k[i]).intersection(subgraph_list) == set(k[i]):
-            return k[i]
+    def get_adjacent_nodes(self, i):
+        """Outputs the adjacent nodes of a given node"""
+        x_i = self.x[i]
+        y_i = self.y[i]
+
+        adjacent_points = {
+            "p1": [x_i + self.xgrid, y_i],
+            "p2": [x_i, y_i + self.ygrid],
+            "p3": [x_i - self.xgrid, y_i],
+            "p4": [x_i, y_i - self.ygrid],
+        }
+
+        adjacent_nodes = [
+            self.get_point_index(adjacent_points[point][0], adjacent_points[point][1])
+            if adjacent_points[point][0] in self.x and adjacent_points[point][1] in self.y
+            else [-1]
+            for point in adjacent_points
+        ]
+
+        return adjacent_nodes
 
 
-def get_revisit_percentage(x_v, y_v):
-    n  = x_v.size
-    x_y = np.zeros(shape = (n,2))
-    
-    for i in range(n):
-        x_y[i] = (x_v[i],y_v[i])
-
-    unq, count = np.unique(x_y, axis=0, return_counts=True)
-    revisits = [x for x in count if (x>1)]    
-    return (len(revisits)/n)*100
+    def get_adjacency_list(self, v_list, obs_list):
+        """Gives the Adjacency list"""
+        v_neigh = self.g.neighborhood(vertices=v_list)
+        result_set = {v for neigh_list in v_neigh for v in neigh_list} - \
+                    set(v_list) - set(obs_list)
+        return list(result_set)
 
 
-def get_subgraph(v):
-    """Generates subgraph for vertex list v"""
-    o = ig.Graph(n=size)
-    for i in v:
-        neigh = get_adjacent_nodes(i)
-        for j in range(4):
-            if (
-                neigh[j][0] != -1
-                and o.are_connected(i, neigh[j][0]) == False
-                and neigh[j][0] in v
-            ):
-                o.add_edge(i, neigh[j][0])
-    o.vs["name"] = [str(i) for i in range(size)]
-    o.vs["label"] = o.vs["name"]
-    return o
+    def get_req_path(self, subgraph_list, l):
+        """Gives the smallest path present within the subgraph"""
+        k = np.array(l)
+        if np.shape(k)[0] == 1:
+            return k
+        k = k[:, 0:-1]
+        for i in range(self.size):
+            if set(k[i]).intersection(subgraph_list) == set(k[i]):
+                return k[i]
 
 
-g = ig.Graph(n=size)
+    def get_metric(self, x_v, y_v):
+        n = x_v.size
+        x_y = np.zeros(shape=(n, 2))
+        path_length = 0 
 
-# graph Generation
-for i in range(size):
-    neigh = get_adjacent_nodes(i)
-    for j in range(4):
-        if neigh[j][0] != -1 and g.are_connected(i, neigh[j][0]) == False:
-            g.add_edge(i, neigh[j][0])
+        for i in range(n):
+            x_y[i] = (x_v[i], y_v[i])
 
-xm = [0]
-ym = [0]
+        unq, count = np.unique(x_y, axis=0, return_counts=True)
+        revisits = [x for x in count if (x > 1)]
+        
+        for i in range(n-1):
+            if (x_v[i] != x_v[i+1]) and (y_v[i] != y_v[i+1]):
+                path_length = path_length + 1
 
-# investigation example iteration = 3
-# obstacle = np.array([32,33,46,47,48,51,52,53])
-# investigation example iteration = 5
-# obstacle = np.array([130,134,135,191,190,192, 193, 194, 195, 184,185, 188, 189 ,204, 205, 209, 210, 212, 215, 216])
-# Example 1 Normal; iteration = 3
-# obstacle = np.array([22, 23,24,25, 49,50,55,56,59,60,61,62,63])
-# Example 2 Sparse; iteration = 5
+        return revisits, path_length / self.size
 
 
-def get_sparse_obstacle(start, end, size):
-    r = []
-    for _ in range(size):
-        r.append(random.randint(start, end))
-    return r
-
-# Obstacle list for sparse obstacles
-# obstacle = np.array(get_sparse_obstacle(1, size, 350))
-
-
-# Non Uniform coverage example
-# Iteration 4
-# obstacle = np.array([40, 41, 42, 43, 52, 53, 54, 55, 92, 93, 94, 95, 164, 165, 166, 167, 168, 169,
-                    # 170, 171, 172, 173, 174, 175, 176, 177, 209, 210, 221, 222, 252, 253, 254, 255, 242, 241, 240])
-# Iteration 2
-# obstacle = np.array([12, 15])
-# Iteration 1
-# obstacle = np.array([1])
-    
-obstacle = np.array([9,11])
-
-# Initiaize visited_node list with the starting node
-visited_nodes = np.array([0])
-obstacle_detected = np.array([])
-
-i = get_subgraph(visited_nodes)
-
-while get_adjacency_list(visited_nodes, obstacle_detected) != []:
-    min_adj = min(get_adjacency_list(visited_nodes, obstacle_detected))
-    o = get_subgraph(np.append(visited_nodes, min_adj))
-    if min_adj == visited_nodes[-1] + 1:
-        if min_adj in obstacle:
-            obstacle_detected = np.append(obstacle_detected, min_adj)
-        else:
-            visited_nodes = np.append(visited_nodes, min_adj)
-    else:
-        l = get_req_path(
-            visited_nodes, o.get_all_shortest_paths(
-                visited_nodes[-1], to=min_adj)
-        )
-        if min_adj in obstacle:
-            try:
-                obstacle_detected = np.append(obstacle_detected, l[0][-1])
-                visited_nodes = np.append(visited_nodes, l[0][1:-1])
-            except:
-                obstacle_detected = np.append(obstacle_detected, l[-1])
-                visited_nodes = np.append(visited_nodes, l[1:-1])
-        else:
-            try:
-                visited_nodes = np.append(visited_nodes, l[0][1:])
-            except:
-                visited_nodes = np.append(visited_nodes, l[1:])
+    def get_subgraph(self, v):
+        """Generates subgraph for vertex list v"""
+        o = ig.Graph(n=self.size)
+        for i in v:
+            neigh = self.get_adjacent_nodes(i)
+            for j in range(4):
+                if (
+                        neigh[j][0] != -1
+                        and o.are_connected(i, neigh[j][0]) == False
+                        and neigh[j][0] in v
+                ):
+                    o.add_edge(i, neigh[j][0])
+        o.vs["name"] = [str(i) for i in range(self.size)]
+        o.vs["label"] = o.vs["name"]
+        return o
 
 
-x_visited = [x[i] for i in visited_nodes]
-y_visited = [y[i] for i in visited_nodes]
-x_visited = np.array(x_visited)
-y_visited = np.array(y_visited)
-get_revisit_percentage(x_visited, y_visited)
-
-x_bound = [min(x) - xgrid/2, min(x) - xgrid/2, max(x) +
-           xgrid/2, max(x) + xgrid/2, min(x) - xgrid/2]
-y_bound = [min(y) - ygrid/2, max(y) + ygrid/2, max(y) +
-           ygrid/2, min(y) - ygrid/2, min(y) - ygrid/2]
+    def generate_graph(self):
+        # graph Generation
+        for i in range(self.size):
+            neigh = self.get_adjacent_nodes(i)
+            for j in range(4):
+                if neigh[j][0] != -1 and self.g.are_connected(i, neigh[j][0]) == False:
+                    self.g.add_edge(i, neigh[j][0])
 
 
-for i in range(size):
-    if i in obstacle_detected:
-        rectangle = plt.Rectangle(
-            (x[i] - xgrid / 2, y[i] - ygrid / 2),
-            1,
-            1,
-            fc="red",
-            alpha=0.2,
-            ec="black",
-        )
-        plt.gca().add_patch(rectangle)
-    else:
-        rectangle = plt.Rectangle(
-            (x[i] - xgrid / 2, y[i] - ygrid / 2),
-            1,
-            1,
-            fc="grey",
-            alpha=0.04,
-            ec="black",
-        )
-        plt.gca().add_patch(rectangle)
+    def get_sparse_obstacle(self, start, end, size):
+        """Generates sparse_obstacle with given start, end and number of obstacles required"""
+        r = []
+        for _ in range(size):
+            r.append(random.randint(start, end))
+        return r
 
-node_coord = [[x[i], y[i]] for i in range(size)]
-visual_style = {}
-g.vs["name"] = [str(i) for i in range(size)]
 
-visual_style["edge_width"] = [0.3]
-visual_style["vertex_size"] = 10
-visual_style["edge_color"] = "orange"
-layout_subgraph = ig.Layout(coords=node_coord)
+    def get_alt_path(self):
+        self.generate_graph()
+        i = self.get_subgraph(self.visited_nodes)
 
-ig.plot(g, target=ax, layout=layout_subgraph, **visual_style)
-plt.plot(x_visited[0], y_visited[0],  marker="o", markersize=15, markeredgecolor="blue", markerfacecolor="blue")
-plt.plot(x_visited[-1], y_visited[-1],  marker="o", markersize=15, markeredgecolor="gold", markerfacecolor="gold")
-plt.plot(x_bound, y_bound, linestyle="solid", color="black", linewidth=0.5)
-plt.quiver(x_visited[:-1], y_visited[:-1], x_visited[1:]-x_visited[:-1], y_visited[1:]-y_visited[:-1], scale_units='xy', angles='xy', scale=1)
-plt.plot(x_visited, y_visited, linestyle="solid", color="green", linewidth=1.0)
-plt.show()
+        while not self.get_adjacency_list(self.visited_nodes, self.obstacle_detected) == []:
+            min_adj = min(self.get_adjacency_list(self.visited_nodes, self.obstacle_detected))
+            o = self.get_subgraph(np.append(self.visited_nodes, min_adj))
+            if min_adj == self.visited_nodes[-1] + 1:
+                if min_adj in self.obstacle:
+                    self.obstacle_detected = np.append(self.obstacle_detected, min_adj)
+                else:
+                    self.visited_nodes = np.append(self.visited_nodes, min_adj)
+            else:
+                l = self.get_req_path(
+                    self.visited_nodes, o.get_all_shortest_paths(
+                        self.visited_nodes[-1], to=min_adj)
+                )
+                if min_adj in self.obstacle:
+                    try:
+                        self.obstacle_detected = np.append(self.obstacle_detected, l[0][-1])
+                        self.visited_nodes = np.append(self.visited_nodes, l[0][1:-1])
+                    except:
+                        self.obstacle_detected = np.append(self.obstacle_detected, l[-1])
+                        self.visited_nodes = np.append(self.visited_nodes, l[1:-1])
+                else:
+                    try:
+                        self.visited_nodes = np.append(self.visited_nodes, l[0][1:])
+                    except:
+                        self.visited_nodes = np.append(self.visited_nodes, l[1:])
+
+
+        self.x_visited = [self.x[i] for i in self.visited_nodes]
+        self.y_visited = [self.y[i] for i in self.visited_nodes]
+        self.x_visited = np.array(self.x_visited)
+        self.y_visited = np.array(self.y_visited)
+
+        return self.x_visited, self.y_visited
+
+
+    def plot(self):
+        self.get_alt_path()
+
+        x_bound = [min(self.x) - self.xgrid / 2, min(self.x) - self.xgrid / 2, max(self.x) +
+                self.xgrid / 2, max(self.x) + self.xgrid / 2, min(self.x) - self.xgrid / 2]
+        y_bound = [min(self.y) - self.ygrid / 2, max(self.y) + self.ygrid / 2, max(self.y) +
+                self.ygrid / 2, min(self.y) - self.ygrid / 2, min(self.y) - self.ygrid / 2]
+
+        for i in range(self.size):
+            if i in self.obstacle_detected:
+                rectangle = plt.Rectangle(
+                    (self.x[i] - self.xgrid / 2, self.y[i] - self.ygrid / 2),
+                    1,
+                    1,
+                    fc="red",
+                    alpha=0.2,
+                    ec="black",
+                )
+                plt.gca().add_patch(rectangle)
+            else:
+                rectangle = plt.Rectangle(
+                    (self.x[i] - self.xgrid / 2, self.y[i] - self.ygrid / 2),
+                    1,
+                    1,
+                    fc="grey",
+                    alpha=0.04,
+                    ec="black",
+                )
+                plt.gca().add_patch(rectangle)
+
+        node_coord = [[self.x[i], self.y[i]] for i in range(self.size)]
+        visual_style = {}
+        self.g.vs["name"] = [str(i) for i in range(self.size)]
+
+        visual_style["edge_width"] = [0.3]
+        visual_style["vertex_size"] = 10
+        visual_style["edge_color"] = "orange"
+        layout_subgraph = ig.Layout(coords=node_coord)
+
+        ig.plot(self.g, target=ax, layout=layout_subgraph, **visual_style)
+        plt.plot(self.x_visited[0], self.y_visited[0], marker="o", markersize=15, markeredgecolor="blue", markerfacecolor="blue")
+        plt.plot(self.x_visited[-1], self.y_visited[-1], marker="o", markersize=15, markeredgecolor="gold", markerfacecolor="gold")
+        plt.plot(x_bound, y_bound, linestyle="solid", color="black", linewidth=0.5)
+        plt.plot(self.x_visited, self.y_visited, linestyle="solid", color="green", linewidth=1.0)
+        plt.show()
+
+
+
+if __name__ == "__main__":
+
+    # investigation example iteration = 3
+    # obstacle = np.array([32,33,46,47,48,51,52,53])
+    # investigation example iteration = 5
+    # obstacle = np.array([130,134,135,191,190,192, 193, 194, 195, 184,185, 188, 189 ,204, 205, 209, 210, 212, 215, 216])
+    # Example 1 Normal; iteration = 3
+    # obstacle = np.array([22, 23,24,25, 49,50,55,56,59,60,61,62,63])
+    # Example 2 Sparse; iteration = 5
+
+    # Non-Uniform coverage example
+    # Iteration 4
+    # obstacle = np.array([40, 41, 42, 43, 52, 53, 54, 55, 92, 93, 94, 95, 164, 165, 166, 167, 168, 169,
+    # 170, 171, 172, 173, 174, 175, 176, 177, 209, 210, 221, 222, 252, 253, 254, 255, 242, 241, 240])
+    # Iteration 2
+    # obstacle = np.array([12, 15])
+    # Iteration 1
+    # obstacle = np.array([1])
+
+    obs = np.array([3, 4, 9, 34])
+    skc = Route(3, obs, 0)
+    skc.plot()
+
