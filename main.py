@@ -3,7 +3,6 @@ from hilbertcurve.hilbertcurve import HilbertCurve
 import matplotlib.pyplot as plt
 import numpy as np
 import igraph as ig
-import random
 
 fig, ax = plt.subplots()
 ax.set_aspect('equal', adjustable='box')
@@ -57,6 +56,9 @@ class Route:
         self.x_visited = np.array([])
         self.y_visited = np.array([])
 
+        # Highest numbered waypoint reached
+        self.max_point = 0
+
 
     def get_point_index(self, xl, yl):
         """Calculates the index of the point on the hilbert's curve"""
@@ -105,23 +107,23 @@ class Route:
             if set(k[i]).intersection(subgraph_list) == set(k[i]):
                 return k[i]
 
+    
+    def get_path_length(self, node_list):
+        n = len(node_list)
+        path = 0
 
-    def get_metric(self, x_v, y_v):
-        n = x_v.size
-        x_y = np.zeros(shape=(n, 2))
-        path_length = 0 
-
-        for i in range(n):
-            x_y[i] = (x_v[i], y_v[i])
-
-        unq, count = np.unique(x_y, axis=0, return_counts=True)
-        revisits = [x for x in count if (x > 1)]
-        
         for i in range(n-1):
-            if (x_v[i] != x_v[i+1]) and (y_v[i] != y_v[i+1]):
-                path_length = path_length + 1
+            if (node_list[i] != node_list[i+1]):
+                path = path + 1
+        
+        return path
+    
 
-        return revisits, path_length / self.size
+    def get_revisits(self, node_list):
+        total_visits = len(node_list)
+        unique_visits = len(set(node_list))
+
+        return (total_visits - unique_visits)/unique_visits
 
 
     def get_subgraph(self, v):
@@ -148,14 +150,6 @@ class Route:
             for j in range(4):
                 if neigh[j][0] != -1 and self.g.are_connected(i, neigh[j][0]) == False:
                     self.g.add_edge(i, neigh[j][0])
-
-
-    def get_sparse_obstacle(self, start, end, size):
-        """Generates sparse_obstacle with given start, end and number of obstacles required"""
-        r = []
-        for _ in range(size):
-            r.append(random.randint(start, end))
-        return r
 
 
     def get_alt_path(self):
@@ -194,7 +188,11 @@ class Route:
         self.x_visited = np.array(self.x_visited)
         self.y_visited = np.array(self.y_visited)
 
-        return self.x_visited, self.y_visited
+        path  = self.get_path_length(self.visited_nodes)
+        rev = self.get_revisits(self.visited_nodes)
+        self.max_point = max(self.visited_nodes)
+
+        return self.x_visited, self.y_visited, rev, path, self.max_point
 
 
     def plot(self):
@@ -242,7 +240,6 @@ class Route:
         plt.plot(x_bound, y_bound, linestyle="solid", color="black", linewidth=0.5)
         plt.plot(self.x_visited, self.y_visited, linestyle="solid", color="green", linewidth=1.0)
         plt.show()
-
 
 
 if __name__ == "__main__":
