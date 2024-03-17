@@ -26,11 +26,6 @@ conda activate SKC
     ```
      conda install -c conda-forge hilbertcurve=2.0.5
     ```
-    d. [Numba](https://numba.pydata.org/) for compile time computations to reduce the runtime. (Optional - user will have to comment the call to the library and @njits )
-    ```
-     conda install -c numba numba=0.59.0
-    ```
-
 5. Clone the repository
 
 6. Activate the conda environment and open the cloned repository in it.
@@ -53,6 +48,8 @@ conda deactivate SKC
 
 File description :
 
-main.py : contains source code for the project
+main.py : Source code for the project
+
+metric.py :  Calculating and Plotting Metric for the proposed rerouting strategy
 
 Illustrations folder contains illustrations used in the paper
