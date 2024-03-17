@@ -4,8 +4,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import statistics 
 from main import Route
+import matplotlib as mpl
 
-plt.rcParams.update({'font.size': 20, 'font.family': 'sans-serif'})
+mpl.rcParams['figure.dpi'] = 600
+plt.rcParams["font.family"] = "Times New Roman"
+csfont = {'fontname':'Times New Roman'}
 
 def get_sparse_obstacle(start, end, size):
     """Generates sparse_obstacle with given start, end and number of obstacles required"""
@@ -37,19 +40,18 @@ def metric(iter, runs, max_blocked_per):
     path_err = [statistics.pstdev(path_array[i])/side_size for i in range(1, max_blocked + 1)]
     path_err.insert(0, 0.0)
 
-    str_label = "Iteration " + str(iter) 
+    str_label = 'Iteration : ' + str(iter) 
     plt.errorbar(range(0, max_blocked+1), path_mean, linestyle='dashed', linewidth=2, marker='o', markersize=15, yerr=path_err, label=str_label)
         
 metric(2, 100, 0.5)
 
 plt.grid(linestyle='dotted')
-plt.tick_params(axis='x', labelsize=15)
-plt.tick_params(axis='y', labelsize=15)
+plt.tick_params(axis='x', labelsize=25, pad=10)
+plt.tick_params(axis='y', labelsize=25, pad=10)
 
 # naming the x axis
-plt.xlabel('Number of Waypoints Blocked', fontsize=20)
+plt.xlabel('Number of Waypoints Blocked', fontsize=30, labelpad=30, **csfont)
 # naming the y axis
-plt.ylabel('Path Length', fontsize=20)
-plt.legend()
+plt.ylabel('Path Length', fontsize=30, labelpad=30, **csfont)
+plt.legend(fontsize = 30, borderpad=1.0, labelspacing=1.5)
 plt.show()
-
