@@ -192,7 +192,7 @@ class Route:
         rev = self.get_revisits(self.visited_nodes)
         self.max_point = max(self.visited_nodes)
 
-        return self.x_visited, self.y_visited, rev, path, self.max_point
+        return self.x_visited, self.y_visited, rev, path, self.max_point, self.visited_nodes
 
 
     def plot(self):
