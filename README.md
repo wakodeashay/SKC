@@ -6,7 +6,7 @@ This repository hosts the implementation of the paper "Online Obstacle evasion f
     ```
     conda create -n <env_name> python=3.11.5
     ```
-<env_name> is the name of the conda environment. Any user defined name can be used, here SKC for sake of example.
+<env_name> is the name of the conda environment. Any user defined name can be used, here SKC is used for the sake of example.
 
 3. Activate the conda environment
     ```
@@ -48,8 +48,8 @@ This repository hosts the implementation of the paper "Online Obstacle evasion f
 
 File description :
 
-main.py : Source code for the project
+- main.py : Source code for the project
 
-metric.py :  Calculating and Plotting Metric for the proposed rerouting strategy
+- metric.py :  Calculating and Plotting Metric for the proposed rerouting strategy
 
-Illustrations folder contains illustrations used in the paper
+- Illustrations folder contains illustrations used in the paper
