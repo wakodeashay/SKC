@@ -1,6 +1,5 @@
 This repository hosts the implementation of the paper "Online Obstacle evasion for Space-Filling Curves". The strategy is implemented in Python 3.11.5. Usage of conda environment for setuping and running the code is highly recommended. Steps to setup the code is described initially, while the file structure and files are described towards the end.
 
-- Install Conda
 1. Install Conda using the official website. [Conda Installation on Linux](https://docs.conda.io/projects/conda/en/latest/user-guide/install/linux.html). Note : Use the instruction for your operating system.
 2. Create a conda environment with Python 3.11.5
     ```
