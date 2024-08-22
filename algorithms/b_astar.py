@@ -12,11 +12,13 @@ ax.set_axis_off()
 
 class BAStarRoute:
 
-    def __init__(self, side_size):
+    def __init__(self, side_size, obstacle):
         self.side_size = side_size
         self.grid_size = self.side_size * self.side_size
 
-        self.obstacle_detected = np.array([])
+        self.obstacle_list = obstacle
+        self.obstacle_detected = []
+        self.all_blocked = False
 
         # Generate Graph
         self.g = ig.Graph(n=self.grid_size)
@@ -40,9 +42,9 @@ class BAStarRoute:
         self.x_nom = self.coordinate[:, 0]
         self.y_nom = self.coordinate[:, 1]
 
-        print(self.points)
-        print(self.x_nom)
-        print(self.y_nom)
+        self.x_visited = np.array([self.x_nom[0]])
+        self.y_visited = np.array([self.y_nom[0]])
+        self.points_visited = [0]
 
         self.generate_graph()
 
@@ -97,6 +99,36 @@ class BAStarRoute:
                 if neigh[j][0] != -1 and self.g.are_connected(i, neigh[j][0]) == False:
                     self.g.add_edge(i, neigh[j][0])
 
+    def get_rel_direction(self, origin_point, adjacent_points):
+        rel_directions = {}
+
+        for point in adjacent_points:
+            if point != -1:
+                if self.y_nom[point] > self.y_nom[origin_point]:
+                    rel_directions['north'] = point
+                elif self.y_nom[point] < self.y_nom[origin_point]:
+                    rel_directions['south'] = point
+                elif self.x_nom[point] > self.x_nom[origin_point]:
+                    rel_directions['west'] = point
+                elif self.x_nom[point] < self.x_nom[origin_point]:
+                    rel_directions['east'] = point
+
+        return rel_directions
+
+    def get_next_point(self, last_point_visited):
+        adjacent_points = self.get_adjacent_nodes(last_point_visited)
+        directed_adjacent_points = self.get_rel_direction(last_point_visited, adjacent_points)
+
+        if 'north' in list(directed_adjacent_points.keys()):
+
+
+
+    def get_alternate_path(self):
+        while not self.all_blocked:
+            last_visited_point = self.points_visited[-1]
+            self.points_visited[last_visited_point + 1] = self.get_next_point(self.points_visited[last_visited_point])
+
+
     def plot_workspace(self):
         self.x_bound = [min(self.x_nom) - self.grid / 2, min(self.x_nom) - self.grid / 2, max(self.x_nom) +
                         self.grid / 2, max(self.x_nom) + self.grid / 2, min(self.x_nom) - self.grid / 2]
@@ -106,7 +138,7 @@ class BAStarRoute:
         for i in range(self.grid_size):
             if i in self.obstacle_detected:
                 rectangle = plt.Rectangle(
-                    (self.x_nom[i] - self.grid / 2, self.y[i] - self.grid / 2),
+                    (self.x_nom[i] - self.grid / 2, self.y_nom[i] - self.grid / 2),
                     1,
                     1,
                     fc="red",
@@ -145,5 +177,6 @@ class BAStarRoute:
 
 
 if __name__ == "__main__":
-    bastar = BAStarRoute(3)
+    obs = np.array([3, 4, 9, 34])
+    bastar = BAStarRoute(6, obs)
     bastar.plot()
