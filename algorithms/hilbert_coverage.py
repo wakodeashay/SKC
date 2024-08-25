@@ -1,9 +1,15 @@
 #!/usr/bin/python3.11
+import os
 from hilbertcurve.hilbertcurve import HilbertCurve
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import numpy as np
 import igraph as ig
+
+# Current file's directory
+current_dir = os.path.dirname(os.path.abspath(__file__))
+# Specify directory to save animation
+doc_anim_dir = os.path.abspath(os.path.join(current_dir, "../docs/animation"))
 
 fig, ax = plt.subplots(figsize=(10, 10))
 ax.set_aspect('equal')
@@ -12,21 +18,17 @@ ax.set_axis_off()
 
 class HilbertRoute:
 
-    def __init__(self, iteration, obstacle, start, plot_flag, animate_flag):
+    def __init__(self, iteration, obstacle, plot_flag, animate_flag):
         self.node_coord = None
         self.layout_subgraph = None
 
         self.iter = iteration
         self.obstacle = obstacle
-        self.start = start
         self.plot_flag = plot_flag
         self.animate_flag = animate_flag
 
-        # Visited nodes
-        # Initialize visited_node list with the starting node
-        self.visited_nodes = np.array([self.start])
-        # Initialize detected obstacle array
-        self.obstacle_detected = np.array([])
+        self.points_visited = [0]
+        self.obstacle_detected = []
 
         # Dimension
         self.dim = 2
@@ -41,24 +43,17 @@ class HilbertRoute:
         # Area covered by the Hilbert's curve
         self.xmin = 0
         self.ymin = 0
-        self.xmax = 10 * self.side_size
-        self.ymax = 10 * self.side_size
+
         # Grid size
-        self.xgrid = 1
-        self.ygrid = 1
-        # Bounding grid
-        self.xmin_grid = self.xmin - self.xgrid / 2
-        self.ymin_grid = self.ymin - self.ygrid / 2
-        self.xmax_grid = self.xmax + self.xgrid / 2
-        self.ymax_grid = self.ymax + self.ygrid / 2
+        self.grid = 1
 
         # Creating Hilbert's curve
         self.hilbert_curve = HilbertCurve(self.iter, self.dim)
         self.distances = list(range(self.size))
         self.points = self.hilbert_curve.points_from_distances(self.distances)
 
-        self.x = np.array([self.points[i][0] for i in range(self.size)])
-        self.y = np.array([self.points[i][1] for i in range(self.size)])
+        self.x_nom = np.array([self.points[i][0] for i in range(self.size)])
+        self.y_nom = np.array([self.points[i][1] for i in range(self.size)])
 
         # Initialize the alternate path suggested
         self.x_visited = np.array([])
@@ -66,35 +61,34 @@ class HilbertRoute:
 
         # Highest numbered waypoint reached
         self.max_point = 0
-
         self.adj_dict = {}
+
+        self.get_alt_path()
 
         self.agent, = ax.plot([], [], 'o', color='green')
         self.path, = ax.plot([], [], 'g-', linewidth=2)
 
-        self.get_alt_path()
-
     def get_point_index(self, xl, yl):
         """Calculates the index of the point on the hilbert's curve"""
-        x_index = np.where(self.x == xl)[0]
-        y_index = np.where(self.y == yl)[0]
+        x_index = np.where(self.x_nom == xl)[0]
+        y_index = np.where(self.y_nom == yl)[0]
         return list(np.intersect1d(x_index, y_index))
 
     def get_adjacent_nodes(self, i):
         """Outputs the adjacent nodes of a given node"""
-        x_i = self.x[i]
-        y_i = self.y[i]
+        x_i = self.x_nom[i]
+        y_i = self.y_nom[i]
 
         adjacent_points = {
-            "p1": [x_i + self.xgrid, y_i],
-            "p2": [x_i, y_i + self.ygrid],
-            "p3": [x_i - self.xgrid, y_i],
-            "p4": [x_i, y_i - self.ygrid],
+            "p1": [x_i + self.grid, y_i],
+            "p2": [x_i, y_i + self.grid],
+            "p3": [x_i - self.grid, y_i],
+            "p4": [x_i, y_i - self.grid],
         }
 
         adjacent_nodes = [
             self.get_point_index(adjacent_points[point][0], adjacent_points[point][1])
-            if adjacent_points[point][0] in self.x and adjacent_points[point][1] in self.y
+            if adjacent_points[point][0] in self.x_nom and adjacent_points[point][1] in self.y_nom
             else [-1]
             for point in adjacent_points
         ]
@@ -162,55 +156,55 @@ class HilbertRoute:
 
     def get_alt_path(self):
         self.generate_graph()
-        i = self.get_subgraph(self.visited_nodes)
+        i = self.get_subgraph(self.points_visited)
 
-        while not self.get_adjacency_list(self.visited_nodes, self.obstacle_detected) == []:
-            min_adj = min(self.get_adjacency_list(self.visited_nodes, self.obstacle_detected))
-            o = self.get_subgraph(np.append(self.visited_nodes, min_adj))
-            if min_adj == self.visited_nodes[-1] + 1:
+        while not self.get_adjacency_list(self.points_visited, self.obstacle_detected) == []:
+            min_adj = min(self.get_adjacency_list(self.points_visited, self.obstacle_detected))
+            o = self.get_subgraph(np.append(self.points_visited, min_adj))
+            if min_adj == self.points_visited[-1] + 1:
                 if min_adj in self.obstacle:
                     self.obstacle_detected = np.append(self.obstacle_detected, min_adj)
                 else:
-                    self.visited_nodes = np.append(self.visited_nodes, min_adj)
+                    self.points_visited = np.append(self.points_visited, min_adj)
             else:
                 l = self.get_req_path(
-                    self.visited_nodes, o.get_all_shortest_paths(
-                        self.visited_nodes[-1], to=min_adj)
+                    self.points_visited, o.get_all_shortest_paths(
+                        self.points_visited[-1], to=min_adj)
                 )
                 if min_adj in self.obstacle:
                     try:
                         self.obstacle_detected = np.append(self.obstacle_detected, l[0][-1])
-                        self.visited_nodes = np.append(self.visited_nodes, l[0][1:-1])
+                        self.points_visited = np.append(self.points_visited, l[0][1:-1])
                     except:
                         self.obstacle_detected = np.append(self.obstacle_detected, l[-1])
-                        self.visited_nodes = np.append(self.visited_nodes, l[1:-1])
+                        self.points_visited = np.append(self.points_visited, l[1:-1])
                 else:
                     try:
-                        self.visited_nodes = np.append(self.visited_nodes, l[0][1:])
+                        self.points_visited = np.append(self.points_visited, l[0][1:])
                     except:
-                        self.visited_nodes = np.append(self.visited_nodes, l[1:])
+                        self.points_visited = np.append(self.points_visited, l[1:])
 
-        self.x_visited = [self.x[i] for i in self.visited_nodes]
-        self.y_visited = [self.y[i] for i in self.visited_nodes]
+        self.x_visited = [self.x_nom[i] for i in self.points_visited]
+        self.y_visited = [self.y_nom[i] for i in self.points_visited]
         self.x_visited = np.array(self.x_visited)
         self.y_visited = np.array(self.y_visited)
 
-        path = self.get_path_length(self.visited_nodes)
-        rev = self.get_revisits(self.visited_nodes)
-        self.max_point = max(self.visited_nodes)
+        path = self.get_path_length(self.points_visited)
+        rev = self.get_revisits(self.points_visited)
+        self.max_point = max(self.points_visited)
 
-        return self.x_visited, self.y_visited, rev, path, self.max_point, self.visited_nodes
+        return self.x_visited, self.y_visited, rev, path, self.max_point, self.points_visited
 
     def plot_workspace(self):
-        self.x_bound = [min(self.x) - self.xgrid / 2, min(self.x) - self.xgrid / 2, max(self.x) +
-                        self.xgrid / 2, max(self.x) + self.xgrid / 2, min(self.x) - self.xgrid / 2]
-        self.y_bound = [min(self.y) - self.ygrid / 2, max(self.y) + self.ygrid / 2, max(self.y) +
-                        self.ygrid / 2, min(self.y) - self.ygrid / 2, min(self.y) - self.ygrid / 2]
+        self.x_bound = [min(self.x_nom) - self.grid / 2, min(self.x_nom) - self.grid / 2, max(self.x_nom) +
+                        self.grid / 2, max(self.x_nom) + self.grid / 2, min(self.x_nom) - self.grid / 2]
+        self.y_bound = [min(self.y_nom) - self.grid / 2, max(self.y_nom) + self.grid / 2, max(self.y_nom) +
+                        self.grid / 2, min(self.y_nom) - self.grid / 2, min(self.y_nom) - self.grid / 2]
 
         for i in range(self.size):
             if i in self.obstacle_detected:
                 rectangle = plt.Rectangle(
-                    (self.x[i] - self.xgrid / 2, self.y[i] - self.ygrid / 2),
+                    (self.x_nom[i] - self.grid / 2, self.y_nom[i] - self.grid / 2),
                     1,
                     1,
                     fc="red",
@@ -220,7 +214,7 @@ class HilbertRoute:
                 plt.gca().add_patch(rectangle)
             else:
                 rectangle = plt.Rectangle(
-                    (self.x[i] - self.xgrid / 2, self.y[i] - self.ygrid / 2),
+                    (self.x_nom[i] - self.grid / 2, self.y_nom[i] - self.grid / 2),
                     1,
                     1,
                     fc="grey",
@@ -232,7 +226,7 @@ class HilbertRoute:
     def plot(self):
         self.plot_workspace()
 
-        self.node_coord = [[self.x[i], self.y[i]] for i in range(self.size)]
+        self.node_coord = [[self.x_nom[i], self.y_nom[i]] for i in range(self.size)]
         self.visual_style = {}
         self.g.vs["name"] = [str(i) for i in range(self.size)]
 
@@ -241,7 +235,7 @@ class HilbertRoute:
         self.visual_style["edge_color"] = "orange"
         self.layout_subgraph = ig.Layout(coords=self.node_coord)
 
-        # ig.plot(self.g, target=ax, layout=self.layout_subgraph, **self.visual_style)
+        ig.plot(self.g, target=ax, layout=self.layout_subgraph, **self.visual_style)
 
         plt.plot(self.x_visited[0], self.y_visited[0], marker="o", markersize=10, markeredgecolor="blue",
                  markerfacecolor="blue")
@@ -252,15 +246,11 @@ class HilbertRoute:
         if self.plot_flag:
             plt.plot(self.x_visited, self.y_visited, linestyle="solid", color="green", linewidth=1.0)
             plt.show()
-        else:
-            pass
 
         if self.animate_flag:
             ani = animation.FuncAnimation(fig, self.motion_update, frames=len(self.x_visited),
                                           interval=100, blit=True)
-            ani.save('animation.gif', writer='ffmpeg', fps=5, dpi=300)
-        else:
-            pass
+            ani.save(os.path.join(doc_anim_dir, 'animation.gif'), writer='ffmpeg', fps=5, dpi=300)
 
     def init(self):
         self.agent.set_data([], [])
