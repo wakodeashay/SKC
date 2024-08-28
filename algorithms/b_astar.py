@@ -188,8 +188,25 @@ class BAStarRoute:
 
         return sum_function
 
+    def get_subgraph(self):
+        o = ig.Graph(n=self.grid_size)
+        for i in self.points_visited:
+            neigh = self.get_adjacent_nodes(i)
+            # neigh = self.adj_dict[i]
+            for j in range(4):
+                if (
+                        neigh[j] != -1
+                        and o.are_connected(i, neigh[j]) == False
+                        and neigh[j] in self.points_visited
+                ):
+                    o.add_edge(i, neigh[j])
+        o.vs["name"] = [str(i) for i in range(self.grid_size)]
+        o.vs["label"] = o.vs["name"]
+        return o
+
     def get_shortest_dist(self, start, end):
-        shortest_path = self.g.get_shortest_path(start, to=end, output='vpath')
+        sub_graph = self.get_subgraph()
+        shortest_path = sub_graph.get_shortest_path(start, to=end, output='vpath')
         return shortest_path, len(shortest_path) - 1
 
     def get_backtrack_path(self, last_bpath):
@@ -331,5 +348,5 @@ class BAStarRoute:
 if __name__ == "__main__":
     obs = np.array([9, 22, 25, 34, 45, 50, 61, 46, 47, 33, 32, 26, 27, 28])
     # obs = np.array([])
-    bastar = BAStarRoute(4, obs, False, False)
+    bastar = BAStarRoute(7, obs, True, False)
     bastar.plot()
