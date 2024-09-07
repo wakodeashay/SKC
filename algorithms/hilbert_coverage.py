@@ -18,12 +18,13 @@ ax.set_axis_off()
 
 class HilbertRoute:
 
-    def __init__(self, iteration, obstacle, plot_flag, animate_flag):
+    def __init__(self, iteration, obstacle, detection_level, plot_flag, animate_flag):
         self.node_coord = None
         self.layout_subgraph = None
 
         self.iter = iteration
         self.obstacle = obstacle
+        self.detection_level = detection_level
         self.plot_flag = plot_flag
         self.animate_flag = animate_flag
 
@@ -39,6 +40,9 @@ class HilbertRoute:
 
         # Generate Graph
         self.g = ig.Graph(n=self.size)
+        self.subgraph = ig.Graph(n=self.size)
+        self.subgraph.vs["name"] = [str(i) for i in range(self.size)]
+        self.subgraph.vs["label"] = self.subgraph.vs["name"]
 
         # Area covered by the Hilbert's curve
         self.xmin = 0
@@ -63,10 +67,17 @@ class HilbertRoute:
         self.max_point = 0
         self.adj_dict = {}
 
-        self.get_alt_path()
+        ## If detection level -1, do contact based obstacle detection
+        if self.detection_level == -1:
+            self.get_alt_path_contact()
+        else:
+            self.get_alt_path_detection_level()
 
-        self.agent, = ax.plot([], [], 'o', color='green')
+        self.agent, = ax.plot([], [], 'o', color='blue')
         self.path, = ax.plot([], [], 'g-', linewidth=2)
+
+    def update_detected_obstacle(self):
+        self.points_visited
 
     def get_point_index(self, xl, yl):
         """Calculates the index of the point on the hilbert's curve"""
@@ -128,22 +139,18 @@ class HilbertRoute:
 
         return (total_visits - unique_visits) / unique_visits
 
-    def get_subgraph(self, v):
+    def generate_subgraph(self, v):
         """Generates subgraph for vertex list v"""
-        o = ig.Graph(n=self.size)
         for i in v:
-            neigh = self.get_adjacent_nodes(i)
-            # neigh = self.adj_dict[i]
-            for j in range(4):
-                if (
-                        neigh[j][0] != -1
-                        and o.are_connected(i, neigh[j][0]) == False
-                        and neigh[j][0] in v
-                ):
-                    o.add_edge(i, neigh[j][0])
-        o.vs["name"] = [str(i) for i in range(self.size)]
-        o.vs["label"] = o.vs["name"]
-        return o
+            if i not in self.points_visited:
+                neigh = self.get_adjacent_nodes(i)
+                for j in range(4):
+                    if (
+                            neigh[j][0] != -1
+                            and self.subgraph.are_connected(i, neigh[j][0]) == False
+                            and neigh[j][0] in v
+                    ):
+                        self.subgraph.add_edge(i, neigh[j][0])
 
     def generate_graph(self):
         # graph Generation
@@ -154,13 +161,13 @@ class HilbertRoute:
                 if neigh[j][0] != -1 and self.g.are_connected(i, neigh[j][0]) == False:
                     self.g.add_edge(i, neigh[j][0])
 
-    def get_alt_path(self):
+    def get_alt_path_detection_level(self):
         self.generate_graph()
-        i = self.get_subgraph(self.points_visited)
-
+        self.generate_subgraph(self.points_visited)
         while not self.get_adjacency_list(self.points_visited, self.obstacle_detected) == []:
+            self.update_detected_obstacle()
             min_adj = min(self.get_adjacency_list(self.points_visited, self.obstacle_detected))
-            o = self.get_subgraph(np.append(self.points_visited, min_adj))
+            self.generate_subgraph(np.append(self.points_visited, min_adj))
             if min_adj == self.points_visited[-1] + 1:
                 if min_adj in self.obstacle:
                     self.obstacle_detected = np.append(self.obstacle_detected, min_adj)
@@ -168,7 +175,50 @@ class HilbertRoute:
                     self.points_visited = np.append(self.points_visited, min_adj)
             else:
                 l = self.get_req_path(
-                    self.points_visited, o.get_all_shortest_paths(
+                    self.points_visited, self.subgraph.get_all_shortest_paths(
+                        self.points_visited[-1], to=min_adj)
+                )
+                if min_adj in self.obstacle:
+                    try:
+                        self.obstacle_detected = np.append(self.obstacle_detected, l[0][-1])
+                        self.points_visited = np.append(self.points_visited, l[0][1:-1])
+                    except:
+                        self.obstacle_detected = np.append(self.obstacle_detected, l[-1])
+                        self.points_visited = np.append(self.points_visited, l[1:-1])
+                else:
+                    try:
+                        self.points_visited = np.append(self.points_visited, l[0][1:])
+                    except:
+                        self.points_visited = np.append(self.points_visited, l[1:])
+
+        self.x_visited = [self.x_nom[i] for i in self.points_visited]
+        self.y_visited = [self.y_nom[i] for i in self.points_visited]
+        self.x_visited = np.array(self.x_visited)
+        self.y_visited = np.array(self.y_visited)
+
+        path = self.get_path_length(self.points_visited)
+        rev = self.get_revisits(self.points_visited)
+        self.max_point = max(self.points_visited)
+
+        return self.x_visited, self.y_visited, rev, path, self.max_point, self.points_visited
+
+
+    def get_alt_path_contact(self):
+        self.generate_graph()
+        # i = self.get_subgraph(self.points_visited)
+        self.generate_subgraph(self.points_visited)
+
+        while not self.get_adjacency_list(self.points_visited, self.obstacle_detected) == []:
+            min_adj = min(self.get_adjacency_list(self.points_visited, self.obstacle_detected))
+            self.generate_subgraph(np.append(self.points_visited, min_adj))
+            if min_adj == self.points_visited[-1] + 1:
+                if min_adj in self.obstacle:
+                    self.obstacle_detected = np.append(self.obstacle_detected, min_adj)
+                else:
+                    self.points_visited = np.append(self.points_visited, min_adj)
+            else:
+                l = self.get_req_path(
+                    self.points_visited, self.subgraph.get_all_shortest_paths(
                         self.points_visited[-1], to=min_adj)
                 )
                 if min_adj in self.obstacle:
