@@ -74,7 +74,7 @@ class HilbertRoute:
             self.get_alt_path_detection_level()
 
         self.agent, = ax.plot([], [], 'o', color='blue')
-        self.path, = ax.plot([], [], 'g-', linewidth=2)
+        self.path, = ax.plot([], [], 'g-', linewidth=5)
 
     def update_detected_obstacle(self):
         self.points_visited
