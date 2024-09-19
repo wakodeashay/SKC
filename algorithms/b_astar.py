@@ -16,7 +16,6 @@ ax.set_axis_off()
 
 
 class BAStarRoute:
-
     def __init__(self, side_size, obstacle, plot_flag, animate_flag):
         self.side_size = side_size
         self.grid_size = self.side_size * self.side_size
