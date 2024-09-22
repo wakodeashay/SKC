@@ -26,7 +26,7 @@ class HilbertRoute:
         self.animate_flag = animate_flag
 
         self.points_visited = [0]
-        self.obstacle_detected = []
+        self.obstacle_detected = np.array([])
 
         # Initialize the alternate path suggested
         self.x_visited = np.array([])
@@ -70,6 +70,12 @@ class HilbertRoute:
                     and neigh[j][0] in v
             ):
                 self.workspace.subgraph.add_edge(new_vertex, neigh[j][0])
+    def update_detected_obstacle(self):
+        neigh = self.workspace.get_adjacent_nodes(self.points_visited[-1])
+        for v in neigh:
+            if v in self.workspace.obstacles and v not in self.obstacle_detected.tolist():
+                self.obstacle_detected = np.append(self.obstacle_detected, v)
+
 
     # def get_alt_path_detection_level(self):
     #     self.generate_graph()
@@ -114,13 +120,15 @@ class HilbertRoute:
 
     def get_alt_path_contact(self):
         self.generate_subgraph(self.points_visited, 0)
+        self.update_detected_obstacle()
 
         while not self.get_adjacency_list(self.points_visited, self.obstacle_detected) == []:
             min_adj = min(self.get_adjacency_list(self.points_visited, self.obstacle_detected))
             self.generate_subgraph(self.points_visited, min_adj)
             if min_adj == self.points_visited[-1] + 1:
                 if min_adj in self.workspace.obstacles:
-                    self.obstacle_detected = np.append(self.obstacle_detected, min_adj)
+                    if min_adj not in self.workspace.obstacles:
+                        self.obstacle_detected = np.append(self.obstacle_detected, min_adj)
                     self.workspace.subgraph.delete_edges(self.workspace.subgraph.incident(min_adj))
 
                 else:
@@ -132,11 +140,13 @@ class HilbertRoute:
                 )
                 if min_adj in self.workspace.obstacles:
                     try:
-                        self.obstacle_detected = np.append(self.obstacle_detected, min_adj)
+                        if min_adj not in self.workspace.obstacles:
+                            self.obstacle_detected = np.append(self.obstacle_detected, min_adj)
                         self.points_visited = np.append(self.points_visited, l[0][1:-1])
                         self.workspace.subgraph.delete_edges(self.workspace.subgraph.incident(min_adj))
                     except:
-                        self.obstacle_detected = np.append(self.obstacle_detected, min_adj)
+                        if min_adj not in self.workspace.obstacles:
+                            self.obstacle_detected = np.append(self.obstacle_detected, min_adj)
                         self.points_visited = np.append(self.points_visited, l[1:-1])
                         self.workspace.subgraph.delete_edges(self.workspace.subgraph.incident(min_adj))
                 else:
@@ -144,6 +154,8 @@ class HilbertRoute:
                         self.points_visited = np.append(self.points_visited, l[0][1:])
                     except:
                         self.points_visited = np.append(self.points_visited, l[1:])
+
+            self.update_detected_obstacle()
 
         self.x_visited = [self.workspace.x_nom[i] for i in self.points_visited]
         self.y_visited = [self.workspace.y_nom[i] for i in self.points_visited]
