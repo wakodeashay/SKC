@@ -12,15 +12,14 @@ ax.set_axis_off()
 
 
 class Workspace:
-    def __init__(self, style, iteration, sparsity_order, block_fraction):
+    def __init__(self, style, iteration, obstacle):
         if style not in ["boustro", "hilbert"]:
             raise ValueError("Style must be one of 'boustro', 'hilbert'")
         else:
             self.style = style
 
         self.iteration = iteration
-        self.sparsity_order = sparsity_order
-        self.block_fraction = block_fraction
+        self.obstacle = obstacle
 
         self.grid_size = 2 ** (2*self.iteration)
         self.side_size = 2 ** self.iteration
@@ -48,8 +47,8 @@ class Workspace:
         self.generate_waypoint_graph()
 
         # Add obstacle to the space
-        obstacle_create = Obstacle(self.side_size, self.block_fraction, self.sparsity_order)
-        self.obstacle_grid = obstacle_create.generate_grid()
+        # obstacle_create = Obstacle(self.side_size, self.block_fraction, self.sparsity_order)
+        self.obstacle_grid = self.obstacle.grid
         self.obstacles = self.get_blocked_waypoints(self.obstacle_grid)
 
     def get_point_index(self, xl, yl):
@@ -123,6 +122,7 @@ class Workspace:
             for j in range(self.side_size):
                 if grid[i, j] == 1:
                     obstacle_ls.append(self.get_point_index(j, i)[0])
+                    # obstacle_ls.append([j, i])
         return obstacle_ls
 
     def plot_workspace(self):
@@ -136,12 +136,12 @@ class Workspace:
 
 
 if __name__ == "__main__":
-    ## Hilbert test
-    # hilbert_workspace = Workspace('hilbert', 2, 1.0, 0.4)
-    # hilbert_workspace.plot_workspace()
-    # print(hilbert_workspace.obstacles)
+    iteration = 3
+    side_size = 2 ** iteration
+    obstacle = Obstacle(side_size, 0.2, 0.5)
 
-    ## Boustro Test
-    boustro_workspace = Workspace('boustro', 2, 1.0, 0.4)
+    hilbert_workspace = Workspace('hilbert', iteration, obstacle)
+    boustro_workspace = Workspace('boustro', iteration, obstacle)
+
+    hilbert_workspace.plot_workspace()
     boustro_workspace.plot_workspace()
-    print(boustro_workspace.obstacles)

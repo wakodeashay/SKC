@@ -16,10 +16,13 @@ class Obstacle:
         self.N = N
         self.blocked_fraction = blocked_fraction
         self.sparsity = sparsity
+
         self.total_nodes = N * N
         self.B = int(round(self.total_nodes * blocked_fraction))  # Total number of blocked nodes
         self.grid = np.zeros((N, N), dtype=int)
         self.components = []
+
+        self.grid = self.generate_grid()
 
     def generate_grid(self):
         """
@@ -70,7 +73,8 @@ class Obstacle:
                     R -= 1
                 else:
                     continue  # No valid neighbors, skip to next component
-
+        # Ensure the left-bottom-most element is unblocked
+        self.grid[0, 0] = 0
         return self.grid
 
     def get_valid_neighbors(self, x, y, component):
@@ -123,7 +127,7 @@ class Obstacle:
         plt.grid(True, which='both', linestyle='--', linewidth=0.5)
         plt.xticks(range(0, N+1, max(1, N // 10)))
         plt.yticks(range(0, N+1, max(1, N // 10)))
-        plt.show()
+        # plt.show()
 
     def calculate_actual_sparsity(self):
         """
