@@ -58,19 +58,25 @@ class Potential:
         self.finest_grid = np.zeros((self.side_size, self.side_size))
         self.initialize_grid()
         self.potential = hierarchical_tiling(self.finest_grid)
-        # self.plot()
+        # self.plot_maps()
 
     def initialize_grid(self):
         for i in range(self.side_size):
             for j in range(self.side_size):
-                self.finest_grid[i, j] = self.side_size + 1 - j
+                self.finest_grid[i, j] = self.side_size + 1 - i
 
     def update_grid(self, i, j, new_potential):
         self.finest_grid[i, j] = new_potential
         self.potential = hierarchical_tiling(self.finest_grid)
-        self.plot()
+        # self.plot_maps()
 
-    def plot(self):
+    def get_potential(self, point_list):
+        potential_list = []
+        for i in point_list:
+            potential_list.append(self.finest_grid[i // self.side_size, i % self.side_size])
+        return potential_list
+
+    def plot_maps(self):
         tiling = hierarchical_tiling(self.finest_grid)
 
         num_levels = len(tiling)
@@ -86,5 +92,8 @@ class Potential:
 
 
 if __name__ == '__main__':
-    pot = Potential(32)
-    pot.update_grid(16, 16,  -100)
+    pot = Potential(8)
+    pot.update_grid(4, 4,  -100)
+    pot.update_grid(3, 5,  -100)
+    pot.update_grid(3, 6,  -100)
+    pot.plot_maps()
