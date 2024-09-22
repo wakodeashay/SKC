@@ -215,6 +215,10 @@ class BAStarRoute:
 
         prev_len = sum(len(sublist) for sublist in self.overall_path)
         self.overall_path.append(self.points_visited[prev_len:])
+        max_waypoint = max(self.points_visited)
+        final_path, _ = self.get_shortest_dist(self.points_visited[-1], max_waypoint)
+        self.overall_path.append(final_path)
+        self.points_visited.extend(final_path)
 
     def plot_workspace(self):
         self.x_bound = [min(self.workspace.x_nom) - self.workspace.grid / 2,
