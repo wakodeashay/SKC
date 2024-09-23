@@ -1,132 +1,134 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def line_of_sight(robot_position, obstacle_position, grid):
-    """
-    Determines if there is a clear line of sight between the robot and the obstacle.
+class ObstacleSensor:
+    def __init__(self, sensor_radius, grid):
+        self.sensor_radius = sensor_radius
+        self.grid = grid
+        self.grid_height, self.grid_width = self.grid.shape
 
-    Parameters:
-    - robot_position: Tuple (x0, y0) representing the robot's position (at grid cell centers)
-    - obstacle_position: Tuple (x1, y1) representing the obstacle's position (at grid cell centers)
-    - grid: 2D numpy array representing the grid environment
+    def line_of_sight(self, robot_position, obstacle_position):
+        """
+        Determines if there is a clear line of sight between the robot and the obstacle.
+        """
+        x0, y0 = robot_position
+        x1, y1 = obstacle_position
 
-    Returns:
-    - True if the line of sight is clear (no obstacles blocking the view), False otherwise.
-    """
-    x0, y0 = robot_position
-    x1, y1 = obstacle_position
+        dx = x1 - x0
+        dy = y1 - y0
 
-    dx = x1 - x0
-    dy = y1 - y0
+        steps = int(max(abs(dx), abs(dy)) * 2)  # Increase steps for better sampling
 
-    steps = int(max(abs(dx), abs(dy)) * 2)  # Increase steps for better sampling
+        if steps == 0:
+            return True  # Same point
 
-    if steps == 0:
-        return True  # Same cell
+        x_inc = dx / steps
+        y_inc = dy / steps
 
-    x_inc = dx / steps
-    y_inc = dy / steps
+        x, y = x0, y0
 
-    x, y = x0, y0
+        for _ in range(steps):
+            x += x_inc
+            y += y_inc
 
-    for _ in range(steps):
-        x += x_inc
-        y += y_inc
+            xi = int(round(x))
+            yi = int(round(y))
 
-        xi = int(np.floor(x))
-        yi = int(np.floor(y))
-
-        # Skip the starting point and the obstacle cell itself
-        if (xi + 0.5, yi + 0.5) == robot_position or (xi + 0.5, yi + 0.5) == obstacle_position:
-            continue
-
-        # Check grid bounds
-        if xi < 0 or xi >= grid.shape[1] or yi < 0 or yi >= grid.shape[0]:
-            continue
-
-        # Check if cell contains an obstacle
-        if grid[yi, xi] == 1:
-            return False  # Line of sight is blocked
-
-    return True  # Line of sight is clear
-
-def get_visible_obstacles(grid, robot_position, sensor_radius):
-    """
-    Determines which obstacles are visible to the robot from its position,
-    using a visual line of sight method with a circular sensor footprint.
-
-    Parameters:
-    - grid: 2D numpy array, with 0 for free space, 1 for obstacles
-    - robot_position: Tuple (x0, y0) representing the robot's position (at grid cell centers)
-    - sensor_radius: Integer, radius of the sensor's circular footprint in grid units
-
-    Returns:
-    - List of tuples (x, y) representing visible obstacle positions (at grid cell centers)
-    """
-    visible_obstacles = []
-    x0, y0 = robot_position
-    grid_height, grid_width = grid.shape
-
-    # Define the bounds of the sensor range (square that contains the circle)
-    x_min = max(0, int(np.floor(x0 - sensor_radius)))
-    x_max = min(grid_width - 1, int(np.floor(x0 + sensor_radius)))
-    y_min = max(0, int(np.floor(y0 - sensor_radius)))
-    y_max = min(grid_height - 1, int(np.floor(y0 + sensor_radius)))
-
-    # Loop over all cells within the square bounds
-    for xi in range(x_min, x_max + 1):
-        for yi in range(y_min, y_max + 1):
-            x = xi + 0.5
-            y = yi + 0.5
-
-            # Skip the robot's own position
-            if (x, y) == robot_position:
+            # Skip the starting point and the obstacle point itself
+            if (xi, yi) == robot_position or (xi, yi) == obstacle_position:
                 continue
 
-            # Calculate Euclidean distance to check if within the circular sensor range
-            distance = np.hypot(x - x0, y - y0)
-            if distance > sensor_radius:
+            # Check grid bounds
+            if xi < 0 or xi >= self.grid_width or yi < 0 or yi >= self.grid_height:
                 continue
 
-            if grid[yi, xi] == 1:
-                # There is an obstacle at this cell
-                obstacle_position = (x, y)
-                if line_of_sight(robot_position, obstacle_position, grid):
-                    visible_obstacles.append(obstacle_position)
-    return visible_obstacles
+            # Check if cell contains an obstacle
+            if self.grid[yi, xi] == 1:
+                return False  # Line of sight is blocked
 
-def plot_grid(grid, robot_position, sensor_radius, visible_obstacles):
-    """
-    Plots the grid environment, robot position, sensor range, and visible obstacles.
-    """
-    plt.figure(figsize=(8,8))
-    plt.imshow(grid, cmap='Greys', origin='lower', extent=[0, grid.shape[1], 0, grid.shape[0]])
+        return True  # Line of sight is clear
 
-    x0, y0 = robot_position
-    plt.plot(x0, y0, 'bo', label='Robot')
+    def get_visible_obstacles(self, robot_position):
+        """
+        Determines which obstacles are visible to the robot from its position,
+        using a visual line of sight method with a circular sensor footprint.
+        """
+        x0, y0 = robot_position
 
-    # Draw sensor range (circle)
-    circle = plt.Circle((x0, y0), sensor_radius, color='blue', fill=False, linestyle='--', label='Sensor Range')
-    plt.gca().add_patch(circle)
+        # Create meshgrid of coordinates within sensor range
+        x_min = max(0, int(np.floor(x0 - self.sensor_radius)))
+        x_max = min(self.grid_width - 1, int(np.floor(x0 + self.sensor_radius)))
+        y_min = max(0, int(np.floor(y0 - self.sensor_radius)))
+        y_max = min(self.grid_height - 1, int(np.floor(y0 + self.sensor_radius)))
 
-    # Plot visible obstacles and lines of sight
-    for obs in visible_obstacles:
-        x, y = obs
-        plt.plot(x, y, 'rx', markersize=12, label='Visible Obstacle' if obs == visible_obstacles[0] else "")
-        # Draw line of sight
-        lx = [x0, x]
-        ly = [y0, y]
-        plt.plot(lx, ly, 'g-', linewidth=1)
+        xi = np.arange(x_min, x_max + 1)
+        yi = np.arange(y_min, y_max + 1)
+        xi_grid, yi_grid = np.meshgrid(xi, yi, indexing='xy')
 
-    plt.legend(loc='upper right')
-    plt.grid(True, which='both', linestyle='--', linewidth=0.5)
-    plt.xticks(range(grid.shape[1] + 1))
-    plt.yticks(range(grid.shape[0] + 1))
-    plt.xlim(0, grid.shape[1])
-    plt.ylim(0, grid.shape[0])
-    plt.gca().set_aspect('equal')
-    plt.title('Robot Sensor View with Visible Obstacles (Centers of Grid Cells)')
-    plt.show()
+        # Flatten the grids for vectorized operations
+        xi_flat = xi_grid.flatten()
+        yi_flat = yi_grid.flatten()
+
+        # Compute distances from the robot position to all points
+        distances = np.hypot(xi_flat - x0, yi_flat - y0)
+
+        # Filter points within sensor radius
+        within_radius = distances <= self.sensor_radius
+
+        # Filter out the robot's own position
+        not_robot = (xi_flat != x0) | (yi_flat != y0)
+
+        # Combine filters
+        valid_points = within_radius & not_robot
+
+        # Get indices of obstacles in the grid
+        obstacle_indices = np.where(self.grid[yi_flat[valid_points], xi_flat[valid_points]] == 1)[0]
+
+        visible_obstacles = []
+
+        for idx in obstacle_indices:
+            x_obs = xi_flat[valid_points][idx]
+            y_obs = yi_flat[valid_points][idx]
+            obstacle_position = (x_obs, y_obs)
+            if self.line_of_sight(robot_position, obstacle_position):
+                visible_obstacles.append(obstacle_position)
+
+        return visible_obstacles
+
+    def plot_grid(self, robot_position, visible_obstacles):
+        """
+        Plots the grid environment, robot position, sensor range, and visible obstacles.
+        """
+        plt.figure(figsize=(8,8))
+        # Adjust the extent to align the grid correctly
+        extent = [-0.5, self.grid_width - 0.5, -0.5, self.grid_height - 0.5]
+        plt.imshow(self.grid, cmap='Greys', origin='lower', extent=extent)
+
+        x0, y0 = robot_position
+        plt.plot(x0, y0, 'bo', label='Robot')
+
+        # Draw sensor range (circle)
+        circle = plt.Circle((x0, y0), self.sensor_radius, color='blue', fill=False, linestyle='--', label='Sensor Range')
+        plt.gca().add_patch(circle)
+
+        # Plot visible obstacles and lines of sight
+        for obs in visible_obstacles:
+            x, y = obs
+            plt.plot(x, y, 'rx', markersize=12, label='Visible Obstacle' if obs == visible_obstacles[0] else "")
+            # Draw line of sight
+            lx = [x0, x]
+            ly = [y0, y]
+            plt.plot(lx, ly, 'g-', linewidth=1)
+
+        plt.legend(loc='upper right')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.5)
+        plt.xticks(range(self.grid_width))
+        plt.yticks(range(self.grid_height))
+        plt.xlim(-0.5, self.grid_width - 0.5)
+        plt.ylim(-0.5, self.grid_height - 0.5)
+        plt.gca().set_aspect('equal')
+        plt.title('Robot Sensor View with Visible Obstacles (Grid Points)')
+        plt.show()
 
 # Main script
 if __name__ == "__main__":
@@ -135,23 +137,24 @@ if __name__ == "__main__":
     grid_height = 15
     grid = np.zeros((grid_height, grid_width), dtype=int)
 
+    # Define the sensor radius (in grid units)
+    sensor_radius = 7  # Sensor radius in units of grid cells
+
     # Place some obstacles (1 represents an obstacle)
     obstacles_indices = [(7, 4), (7, 5), (7, 6), (8, 7), (9, 7), (10, 7), (5, 10), (6, 10), (7, 10)]
     for xi, yi in obstacles_indices:
         grid[yi, xi] = 1  # Note that numpy arrays are indexed as [row, column] => [y, x]
 
-    # Convert obstacle indices to positions at grid cell centers
-    obstacles_positions = [(xi + 0.5, yi + 0.5) for xi, yi in obstacles_indices]
+    sensor = ObstacleSensor(sensor_radius, grid)
 
-    # Define the robot position at the center of a grid cell
-    robot_index = (3, 3)  # (x, y) indices in the grid
-    robot_position = (robot_index[0] + 0.5, robot_index[1] + 0.5)
+    # Obstacle positions are now at integer grid coordinates
+    obstacles_positions = [(xi, yi) for xi, yi in obstacles_indices]
 
-    # Define the sensor radius (in grid units)
-    sensor_radius = 7 # Sensor radius in units of grid cells
+    # Define the robot position at a grid point
+    robot_index = (7, 7)  # (x, y) indices in the grid
+    robot_position = (robot_index[0], robot_index[1])
 
-    visible_obstacles = get_visible_obstacles(grid, robot_position, sensor_radius)
-
+    visible_obstacles = sensor.get_visible_obstacles(robot_position)
     print("Visible obstacles from robot at position {}: {}".format(robot_position, visible_obstacles))
 
-    plot_grid(grid, robot_position, sensor_radius, visible_obstacles)
+    sensor.plot_grid(robot_position, visible_obstacles)
