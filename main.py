@@ -7,12 +7,12 @@ from workspace.obstacle import Obstacle
 
 iteration = 3
 side_size = 2 ** iteration
-obstacle = Obstacle(side_size, 0.6,1.0)
+obstacle = Obstacle(side_size, 0.2,0.8)
 
 hilbert_workspace = Workspace('hilbert', iteration, obstacle)
 boustro_workspace = Workspace('boustro', iteration, obstacle)
 
-hilbert_route = HilbertRoute(hilbert_workspace, -1, True, False)
+hilbert_route = HilbertRoute(hilbert_workspace, 2, True, False)
 hilbert_route.plot()
 
 bastar = BAStarRoute(boustro_workspace, True, False)
