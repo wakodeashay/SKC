@@ -248,6 +248,9 @@ class BAStarRoute:
     def plot(self):
         self.plot_workspace()
 
+        # Turn off the axis, bounding box, and markings
+        plt.gca().set_axis_off()
+
         for i in self.points_visited:
             self.x_visited.append(self.workspace.x_nom[i])
             self.y_visited.append(self.workspace.y_nom[i])
@@ -256,24 +259,29 @@ class BAStarRoute:
                  markerfacecolor="blue")
         plt.plot(self.x_visited[-1], self.y_visited[-1], marker="o", markersize=10, markeredgecolor="gold",
                  markerfacecolor="gold")
+        plt.plot(self.x_bound, self.y_bound, linestyle="solid", color="black", linewidth=1)
 
-        for i in range(len(self.overall_path)):
-            if i % 2 == 0:
-                plt.text(self.workspace.x_nom[self.overall_path[i][0]], self.workspace.y_nom[self.overall_path[i][0]],
-                        f'{int(i / 2) + 1},S',
-                        fontsize=24, ha='left', va='top',
-                        color='red')
-
-                plt.text(self.workspace.x_nom[self.overall_path[i][-1]], self.workspace.y_nom[self.overall_path[i][-1]],
-                        f'{int(i / 2) + 1},E',
-                        fontsize=24, ha='left', va='top',
-                        color='blue')
+        # for i in range(len(self.overall_path)):
+        #     if i % 2 == 0:
+        #         plt.text(self.workspace.x_nom[self.overall_path[i][0]], self.workspace.y_nom[self.overall_path[i][0]],
+        #                 f'{int(i / 2) + 1},S',
+        #                 fontsize=24, ha='left', va='top',
+        #                 color='red')
+        #
+        #         plt.text(self.workspace.x_nom[self.overall_path[i][-1]], self.workspace.y_nom[self.overall_path[i][-1]],
+        #                 f'{int(i / 2) + 1},E',
+        #                 fontsize=24, ha='left', va='top',
+        #                 color='blue')
 
         # for i, (x, y) in self.workspace.points.items():
         #     plt.text(x, y, f'{i}', fontsize=24, ha='right', va='bottom', color='blue')
 
         if self.plot_flag:
             plt.plot(self.x_visited, self.y_visited, linestyle="solid", color="green", linewidth=1.0)
+            # Ensure the x and y axes have the same scale
+            plt.gca().set_aspect('equal')
+            # Remove the axis and bounding box before showing the plot
+            plt.gca().set_axis_off()
             plt.show()
 
         if self.animate_flag:
