@@ -3,6 +3,7 @@ import os
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import numpy as np
+from SKC.sensors.obstacle_sensor import ObstacleSensor
 
 # Current file's directory
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -32,13 +33,13 @@ class HilbertRoute:
         self.x_visited = np.array([])
         self.y_visited = np.array([])
 
+        self.obstacle_sensor = ObstacleSensor(self.detection_radius, self.workspace.obstacle_grid)
+
         ## If detection level -1, do contact based obstacle detection
         if self.detection_radius == -1:
             self.get_alt_path_contact()
-            pass
         else:
-            # self.get_alt_path_detection_level(self.detection_radius)
-            pass
+            self.get_alt_path_detection_level()
 
         self.agent, = ax.plot([], [], 'o', color='blue')
         self.path, = ax.plot([], [], 'g-', linewidth=5)
@@ -70,53 +71,87 @@ class HilbertRoute:
                     and neigh[j][0] in v
             ):
                 self.workspace.subgraph.add_edge(new_vertex, neigh[j][0])
+
+    def check_obstacle(self, v):
+        """Outputs the adjacent nodes of a given node"""
+        x_i = self.workspace.x_nom[v]
+        y_i = self.workspace.y_nom[v]
+
+        adjacent_points = {
+            "p1": [x_i + self.workspace.grid, y_i],
+            "p2": [x_i, y_i + self.workspace.grid],
+            "p3": [x_i - self.workspace.grid, y_i],
+            "p4": [x_i, y_i - self.workspace.grid],
+            "p5": [x_i + self.workspace.grid, y_i + self.workspace.grid],
+            "p6": [x_i + self.workspace.grid, y_i - self.workspace.grid],
+            "p7": [x_i - self.workspace.grid, y_i + self.workspace.grid],
+            "p8": [x_i - self.workspace.grid, y_i - self.workspace.grid],
+        }
+
+        adjacent_nodes = [
+            self.workspace.get_point_index(adjacent_points[point][0], adjacent_points[point][1])
+            if adjacent_points[point][0] in self.workspace.x_nom and adjacent_points[point][1] in self.workspace.y_nom
+            else [-1]
+            for point in adjacent_points
+        ]
+
+        return adjacent_nodes
+
     def update_detected_obstacle(self):
-        neigh = self.workspace.get_adjacent_nodes(self.points_visited[-1])
+        neigh = self.check_obstacle(self.points_visited[-1])
         for v in neigh:
             if v in self.workspace.obstacles and v not in self.obstacle_detected.tolist():
                 self.obstacle_detected = np.append(self.obstacle_detected, v)
 
+    def sense_obstacle(self):
+        visible_obstacles = self.obstacle_sensor.get_visible_obstacles((self.workspace.x_nom[self.points_visited[-1]], self.workspace.y_nom[self.points_visited[-1]]))
+        for i in visible_obstacles:
+            visible_obstacle_index = self.workspace.get_point_index(i[0], i[1])
+            if visible_obstacle_index not in self.obstacle_detected.tolist():
+                self.obstacle_detected = np.append(self.obstacle_detected, visible_obstacle_index)
 
-    # def get_alt_path_detection_level(self):
-    #     self.generate_graph()
-    #     self.generate_subgraph(self.points_visited)
-    #     while not self.get_adjacency_list(self.points_visited, self.obstacle_detected) == []:
-    #         # self.update_detected_obstacle()
-    #         min_adj = min(self.get_adjacency_list(self.points_visited, self.obstacle_detected))
-    #         self.generate_subgraph(np.append(self.points_visited, min_adj))
-    #         if min_adj == self.points_visited[-1] + 1:
-    #             if min_adj in self.obstacle:
-    #                 self.obstacle_detected = np.append(self.obstacle_detected, min_adj)
-    #             else:
-    #                 self.points_visited = np.append(self.points_visited, min_adj)
-    #         else:
-    #             l = self.get_req_path(
-    #                 self.points_visited, self.subgraph.get_all_shortest_paths(
-    #                     self.points_visited[-1], to=min_adj)
-    #             )
-    #             if min_adj in self.obstacle:
-    #                 try:
-    #                     self.obstacle_detected = np.append(self.obstacle_detected, l[0][-1])
-    #                     self.points_visited = np.append(self.points_visited, l[0][1:-1])
-    #                 except:
-    #                     self.obstacle_detected = np.append(self.obstacle_detected, l[-1])
-    #                     self.points_visited = np.append(self.points_visited, l[1:-1])
-    #             else:
-    #                 try:
-    #                     self.points_visited = np.append(self.points_visited, l[0][1:])
-    #                 except:
-    #                     self.points_visited = np.append(self.points_visited, l[1:])
-    #
-    #     self.x_visited = [self.x_nom[i] for i in self.points_visited]
-    #     self.y_visited = [self.y_nom[i] for i in self.points_visited]
-    #     self.x_visited = np.array(self.x_visited)
-    #     self.y_visited = np.array(self.y_visited)
-    #
-    #     path = self.get_path_length(self.points_visited)
-    #     rev = self.get_revisits(self.points_visited)
-    #     self.max_point = max(self.points_visited)
-    #
-    #     return self.x_visited, self.y_visited, rev, path, self.max_point, self.points_visited
+    def get_alt_path_detection_level(self):
+        self.generate_subgraph(self.points_visited, 0)
+        self.sense_obstacle()
+
+        while not self.get_adjacency_list(self.points_visited, self.obstacle_detected) == []:
+            min_adj = min(self.get_adjacency_list(self.points_visited, self.obstacle_detected))
+            self.generate_subgraph(self.points_visited, min_adj)
+            if min_adj == self.points_visited[-1] + 1:
+                if min_adj in self.workspace.obstacles:
+                    if min_adj not in self.workspace.obstacles:
+                        self.obstacle_detected = np.append(self.obstacle_detected, min_adj)
+                    self.workspace.subgraph.delete_edges(self.workspace.subgraph.incident(min_adj))
+                else:
+                    self.points_visited = np.append(self.points_visited, min_adj)
+            else:
+                l = self.get_req_path(
+                    self.points_visited, self.workspace.subgraph.get_all_shortest_paths(
+                        self.points_visited[-1], to=min_adj)
+                )
+                if min_adj in self.workspace.obstacles:
+                    try:
+                        if min_adj not in self.workspace.obstacles:
+                            self.obstacle_detected = np.append(self.obstacle_detected, min_adj)
+                        self.points_visited = np.append(self.points_visited, l[0][1:-1])
+                        self.workspace.subgraph.delete_edges(self.workspace.subgraph.incident(min_adj))
+                    except:
+                        if min_adj not in self.workspace.obstacles:
+                            self.obstacle_detected = np.append(self.obstacle_detected, min_adj)
+                        self.points_visited = np.append(self.points_visited, l[1:-1])
+                        self.workspace.subgraph.delete_edges(self.workspace.subgraph.incident(min_adj))
+                else:
+                    try:
+                        self.points_visited = np.append(self.points_visited, l[0][1:])
+                    except:
+                        self.points_visited = np.append(self.points_visited, l[1:])
+
+            self.sense_obstacle()
+
+        self.x_visited = [self.workspace.x_nom[i] for i in self.points_visited]
+        self.y_visited = [self.workspace.y_nom[i] for i in self.points_visited]
+        self.x_visited = np.array(self.x_visited)
+        self.y_visited = np.array(self.y_visited)
 
     def get_alt_path_contact(self):
         self.generate_subgraph(self.points_visited, 0)
