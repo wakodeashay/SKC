@@ -54,7 +54,7 @@
 
 * algorithms: This folder hosts source code for various coverage path planning strategies 
 
-* docs: Hosts plots and illustrations
+* docs: Plots and Animation are saved here
 
 * sensors: Hosts sensor model used by coverage path planning strategies
 
