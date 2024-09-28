@@ -138,7 +138,7 @@ if __name__ == "__main__":
     grid = np.zeros((grid_height, grid_width), dtype=int)
 
     # Define the sensor radius (in grid units)
-    sensor_radius = 7  # Sensor radius in units of grid cells
+    sensor_radius = 1  # Sensor radius in units of grid cells
 
     # Place some obstacles (1 represents an obstacle)
     obstacles_indices = [(7, 4), (7, 5), (7, 6), (8, 7), (9, 7), (10, 7), (5, 10), (6, 10), (7, 10)]
@@ -151,7 +151,7 @@ if __name__ == "__main__":
     obstacles_positions = [(xi, yi) for xi, yi in obstacles_indices]
 
     # Define the robot position at a grid point
-    robot_index = (7, 7)  # (x, y) indices in the grid
+    robot_index = (8, 9)  # (x, y) indices in the grid
     robot_position = (robot_index[0], robot_index[1])
 
     visible_obstacles = sensor.get_visible_obstacles(robot_position)
