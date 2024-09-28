@@ -154,8 +154,8 @@ class Obstacle:
         labeled_grid, num_features = label(grid, structure=structure)
 
         self.actual_sparsity = (num_features - 1) / (B - 1) if B > 1 else 1.0
-        print(f"Actual number of components: {num_features}")
-        print(f"Actual sparsity: {self.actual_sparsity:.2f}")
+        # print(f"Actual number of components: {num_features}")
+        # print(f"Actual sparsity: {self.actual_sparsity:.2f}")
         return self.actual_sparsity
 
 # Example usage
