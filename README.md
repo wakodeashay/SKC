@@ -1,6 +1,6 @@
 # This repository hosts code to implement coverage path planning for unstructured environments. #
 
-## Steps to setup and run and example
+## Code setup 
 #### 1. Install Conda using the official website. [Conda Installation on Linux](https://docs.conda.io/projects/conda/en/latest/user-guide/install/linux.html). Note : Use the instruction for your operating system.
 #### 2. Create a conda environment with Python 3.11.5
     ```
@@ -37,6 +37,7 @@
     ```
     cd {clone location}/SKC
     ```
+## Run example
 
 #### 7. Run the code
     ```
