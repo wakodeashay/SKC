@@ -1,4 +1,4 @@
-# This repository hosts code to implement coverage path planning for unstructured environments. #
+# This repository hosts code to implement coverage path planning for unstructured environments using Hilbert's Space Filling curve. #
 
 ## Code setup 
 #### 1. Install Conda using the official website. [Conda Installation on Linux](https://docs.conda.io/projects/conda/en/latest/user-guide/install/linux.html).
