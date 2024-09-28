@@ -202,7 +202,7 @@ class BAStarRoute:
             back_track_path = self.get_backtrack_path(self.points_visited)
 
             if back_track_path is None:
-                print('BASTAR trajectory is complete!!')
+                # print('BASTAR trajectory is complete!!')
                 break
 
             back_track_path = back_track_path[1:]
