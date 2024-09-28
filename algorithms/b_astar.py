@@ -4,17 +4,13 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import numpy as np
 
-from SKC.workspace.workspace import Workspace
-from SKC.workspace.obstacle import Obstacle
+from workspace.workspace import Workspace
+from workspace.obstacle import Obstacle
 
 # Current file's directory
 current_dir = os.path.dirname(os.path.abspath(__file__))
 # Specify directory to save animation
 doc_anim_dir = os.path.abspath(os.path.join(current_dir, "../docs/animation"))
-
-fig, ax = plt.subplots(figsize=(10, 10))
-ax.set_aspect('equal')
-ax.set_axis_off()
 
 
 class BAStarRoute:
@@ -30,39 +26,70 @@ class BAStarRoute:
         self.y_visited = [self.workspace.y_nom[0]]
         self.points_visited = [0]
 
+        # Precompute coordinate-to-index mapping
+        self.coord_to_index = {
+            (self.workspace.x_nom[i], self.workspace.y_nom[i]): i
+            for i in range(len(self.workspace.x_nom))
+        }
+
+        self.adjacency_list = {}
+        self.all_neighbors = {}
+        self.init_adjacency_and_neighbors()
+
         self.overall_path = []
         self.bastar_complete = False
         self.get_alternate_path()
 
-        self.agent, = ax.plot([], [], 'o', color='green')
-        self.path, = ax.plot([], [], 'g-', linewidth=2)
+        if plot_flag or animate_flag:
+            self.fig, self.ax = plt.subplots(figsize=(10, 10))
+            self.ax.set_aspect('equal')
+            self.ax.set_axis_off()
+
+        self.agent, = self.ax.plot([], [], 'o', color='blue')
+        self.path, = self.ax.plot([], [], 'g-', linewidth=5)
+
+    def init_adjacency_and_neighbors(self):
+        directions = ['east', 'north-east', 'north', 'north-west', 'west',
+                      'south-west', 'south', 'south-east']
+
+        for i in range(len(self.workspace.x_nom)):
+            x_i = self.workspace.x_nom[i]
+            y_i = self.workspace.y_nom[i]
+
+            # For get_adjacent_nodes
+            adjacent_coords = [
+                (x_i + self.workspace.grid, y_i),
+                (x_i, y_i + self.workspace.grid),
+                (x_i - self.workspace.grid, y_i),
+                (x_i, y_i - self.workspace.grid)
+            ]
+            self.adjacency_list[i] = [
+                self.coord_to_index.get(coord, -1)
+                for coord in adjacent_coords
+            ]
+
+            # For get_all_neighbors
+            neighbor_coords = {
+                directions[0]: (x_i + self.workspace.grid, y_i),
+                directions[1]: (x_i + self.workspace.grid, y_i + self.workspace.grid),
+                directions[2]: (x_i, y_i + self.workspace.grid),
+                directions[3]: (x_i - self.workspace.grid, y_i + self.workspace.grid),
+                directions[4]: (x_i - self.workspace.grid, y_i),
+                directions[5]: (x_i - self.workspace.grid, y_i - self.workspace.grid),
+                directions[6]: (x_i, y_i - self.workspace.grid),
+                directions[7]: (x_i + self.workspace.grid, y_i - self.workspace.grid)
+            }
+            self.all_neighbors[i] = {
+                direction: self.coord_to_index.get(coord, -1)
+                for direction, coord in neighbor_coords.items()
+            }
 
     def get_point_index(self, xl, yl):
         """Calculates the index of the point on the hilbert's curve"""
-        x_index = np.where(self.workspace.x_nom == xl)[0]
-        y_index = np.where(self.workspace.y_nom == yl)[0]
-        return list(np.intersect1d(x_index, y_index))[0]
+        return self.coord_to_index.get((xl, yl), -1)
 
     def get_adjacent_nodes(self, i):
-        """Outputs the adjacent nodes of a given node"""
-        x_i = self.workspace.x_nom[i]
-        y_i = self.workspace.y_nom[i]
-
-        adjacent_points = {
-            "p1": [x_i + self.workspace.grid, y_i],
-            "p2": [x_i, y_i + self.workspace.grid],
-            "p3": [x_i - self.workspace.grid, y_i],
-            "p4": [x_i, y_i - self.workspace.grid],
-        }
-
-        adjacent_nodes = [
-            self.get_point_index(adjacent_points[i][0], adjacent_points[i][1])
-            if adjacent_points[i][0] in self.workspace.x_nom and adjacent_points[i][1] in self.workspace.y_nom
-            else -1
-            for i in adjacent_points
-        ]
-
-        return adjacent_nodes
+        return self.adjacency_list.get(i, [])
 
     def get_rel_direction(self, origin_point, adjacent_points):
         rel_directions = {}
@@ -99,31 +126,7 @@ class BAStarRoute:
 
     def get_all_neighbors(self, point):
         """Outputs all the adjacent nodes of a given node"""
-        dir = ['east', 'north-east', 'north', 'north-west', 'west', 'south-west', 'south', 'south-east']
-
-        x_i = self.workspace.x_nom[point]
-        y_i = self.workspace.y_nom[point]
-
-        adjacent_points = {
-            dir[0]: [x_i + self.workspace.grid, y_i],
-            dir[1]: [x_i + self.workspace.grid, y_i + self.workspace.grid],
-            dir[2]: [x_i, y_i + self.workspace.grid],
-            dir[3]: [x_i - self.workspace.grid, y_i + self.workspace.grid],
-            dir[4]: [x_i - self.workspace.grid, y_i],
-            dir[5]: [x_i - self.workspace.grid, y_i - self.workspace.grid],
-            dir[6]: [x_i, y_i - self.workspace.grid],
-            dir[7]: [x_i + self.workspace.grid, y_i - self.workspace.grid],
-        }
-
-        adjacent_nodes = {
-            direction: self.get_point_index(coord[0], coord[1])
-            if coord[0] in self.workspace.x_nom and coord[1] in self.workspace.y_nom
-            else -1
-            for direction, coord in adjacent_points.items()
-        }
-
-        return adjacent_nodes
-
+        return self.all_neighbors.get(point, {})
     def b_value(self, point1, point2):
         if point1 not in self.obstacle_detected and point1 not in self.points_visited and point1 != -1 and (
                 point2 in self.obstacle_detected or point2 == -1):
@@ -133,14 +136,15 @@ class BAStarRoute:
 
     def sum_function(self, point):
         all_neighbors = self.get_all_neighbors(point)
-
-        sum_function = self.b_value(all_neighbors['east'], all_neighbors['south-east']) + self.b_value(
-            all_neighbors['east'], all_neighbors['north-east']) + self.b_value(all_neighbors['west'], all_neighbors[
-            'south-west']) + self.b_value(all_neighbors['west'], all_neighbors['north-west']) + self.b_value(
-            all_neighbors['south'], all_neighbors['south-west']) + self.b_value(all_neighbors['south'],
-                                                                                all_neighbors['south-east'])
-
-        return sum_function
+        b_values = [
+            self.b_value(all_neighbors.get('east', -1), all_neighbors.get('south-east', -1)),
+            self.b_value(all_neighbors.get('east', -1), all_neighbors.get('north-east', -1)),
+            self.b_value(all_neighbors.get('west', -1), all_neighbors.get('south-west', -1)),
+            self.b_value(all_neighbors.get('west', -1), all_neighbors.get('north-west', -1)),
+            self.b_value(all_neighbors.get('south', -1), all_neighbors.get('south-west', -1)),
+            self.b_value(all_neighbors.get('south', -1), all_neighbors.get('south-east', -1)),
+        ]
+        return sum(b_values)
 
     def get_subgraph(self):
         for i in self.points_visited:
