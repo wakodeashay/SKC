@@ -50,8 +50,14 @@
 
 ### - Codemap
 
-#### main.py : Source code for the project
+#### main.py: Run examples using this script
 
-#### metric.py :  Calculating and Plotting Metric for the proposed rerouting strategy
+#### algorithms: This folder hosts source code for various coverage path planning strategies 
+
+#### docs: Hosts plots and illustrations
+
+#### sensors: Hosts sensor model used by coverage path planning strategies
+
+#### workspace: Hosts script to create grid workspace with obstacles
 
 #### Illustrations folder contains illustrations used in the paper
