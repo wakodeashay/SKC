@@ -3,7 +3,7 @@ import os
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import numpy as np
-from SKC.sensors.obstacle_sensor import ObstacleSensor
+from sensors.obstacle_sensor import ObstacleSensor
 
 # Current file's directory
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -34,12 +34,7 @@ class HilbertRoute:
         self.y_visited = np.array([])
 
         self.obstacle_sensor = ObstacleSensor(self.detection_radius, self.workspace.obstacle_grid)
-
-        ## If detection level -1, do contact based obstacle detection
-        if self.detection_radius == -1:
-            self.get_alt_path_contact()
-        else:
-            self.get_alt_path_detection_level()
+        self.get_alt_path_detection_level()
 
         self.agent, = ax.plot([], [], 'o', color='blue')
         self.path, = ax.plot([], [], 'g-', linewidth=5)
@@ -72,43 +67,16 @@ class HilbertRoute:
             ):
                 self.workspace.subgraph.add_edge(new_vertex, neigh[j][0])
 
-    def check_obstacle(self, v):
-        """Outputs the adjacent nodes of a given node"""
-        x_i = self.workspace.x_nom[v]
-        y_i = self.workspace.y_nom[v]
-
-        adjacent_points = {
-            "p1": [x_i + self.workspace.grid, y_i],
-            "p2": [x_i, y_i + self.workspace.grid],
-            "p3": [x_i - self.workspace.grid, y_i],
-            "p4": [x_i, y_i - self.workspace.grid],
-            "p5": [x_i + self.workspace.grid, y_i + self.workspace.grid],
-            "p6": [x_i + self.workspace.grid, y_i - self.workspace.grid],
-            "p7": [x_i - self.workspace.grid, y_i + self.workspace.grid],
-            "p8": [x_i - self.workspace.grid, y_i - self.workspace.grid],
-        }
-
-        adjacent_nodes = [
-            self.workspace.get_point_index(adjacent_points[point][0], adjacent_points[point][1])
-            if adjacent_points[point][0] in self.workspace.x_nom and adjacent_points[point][1] in self.workspace.y_nom
-            else [-1]
-            for point in adjacent_points
-        ]
-
-        return adjacent_nodes
-
-    def update_detected_obstacle(self):
-        neigh = self.check_obstacle(self.points_visited[-1])
-        for v in neigh:
-            if v in self.workspace.obstacles and v not in self.obstacle_detected.tolist():
-                self.obstacle_detected = np.append(self.obstacle_detected, v)
-
     def sense_obstacle(self):
         visible_obstacles = self.obstacle_sensor.get_visible_obstacles((self.workspace.x_nom[self.points_visited[-1]], self.workspace.y_nom[self.points_visited[-1]]))
         for i in visible_obstacles:
             visible_obstacle_index = self.workspace.get_point_index(i[0], i[1])
             if visible_obstacle_index not in self.obstacle_detected.tolist():
                 self.obstacle_detected = np.append(self.obstacle_detected, visible_obstacle_index)
+
+    def get_shortest_dist(self, start, end):
+        shortest_path = self.workspace.subgraph.get_shortest_path(start, to=end, output='vpath')
+        return shortest_path, len(shortest_path) - 1
 
     def get_alt_path_detection_level(self):
         self.generate_subgraph(self.points_visited, 0)
@@ -148,49 +116,12 @@ class HilbertRoute:
 
             self.sense_obstacle()
 
-        self.x_visited = [self.workspace.x_nom[i] for i in self.points_visited]
-        self.y_visited = [self.workspace.y_nom[i] for i in self.points_visited]
-        self.x_visited = np.array(self.x_visited)
-        self.y_visited = np.array(self.y_visited)
-
-    def get_alt_path_contact(self):
-        self.generate_subgraph(self.points_visited, 0)
-        self.update_detected_obstacle()
-
-        while not self.get_adjacency_list(self.points_visited, self.obstacle_detected) == []:
-            min_adj = min(self.get_adjacency_list(self.points_visited, self.obstacle_detected))
-            self.generate_subgraph(self.points_visited, min_adj)
-            if min_adj == self.points_visited[-1] + 1:
-                if min_adj in self.workspace.obstacles:
-                    if min_adj not in self.workspace.obstacles:
-                        self.obstacle_detected = np.append(self.obstacle_detected, min_adj)
-                    self.workspace.subgraph.delete_edges(self.workspace.subgraph.incident(min_adj))
-
-                else:
-                    self.points_visited = np.append(self.points_visited, min_adj)
-            else:
-                l = self.get_req_path(
-                    self.points_visited, self.workspace.subgraph.get_all_shortest_paths(
-                        self.points_visited[-1], to=min_adj)
-                )
-                if min_adj in self.workspace.obstacles:
-                    try:
-                        if min_adj not in self.workspace.obstacles:
-                            self.obstacle_detected = np.append(self.obstacle_detected, min_adj)
-                        self.points_visited = np.append(self.points_visited, l[0][1:-1])
-                        self.workspace.subgraph.delete_edges(self.workspace.subgraph.incident(min_adj))
-                    except:
-                        if min_adj not in self.workspace.obstacles:
-                            self.obstacle_detected = np.append(self.obstacle_detected, min_adj)
-                        self.points_visited = np.append(self.points_visited, l[1:-1])
-                        self.workspace.subgraph.delete_edges(self.workspace.subgraph.incident(min_adj))
-                else:
-                    try:
-                        self.points_visited = np.append(self.points_visited, l[0][1:])
-                    except:
-                        self.points_visited = np.append(self.points_visited, l[1:])
-
-            self.update_detected_obstacle()
+        max_waypoint = max(self.points_visited)
+        final_path, _ = self.get_shortest_dist(self.points_visited[-1], max_waypoint)
+        if len(final_path) != 1:
+            self.points_visited.extend(final_path[1:])
+        else:
+            pass
 
         self.x_visited = [self.workspace.x_nom[i] for i in self.points_visited]
         self.y_visited = [self.workspace.y_nom[i] for i in self.points_visited]
