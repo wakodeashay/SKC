@@ -4,7 +4,7 @@ import numpy as np
 import igraph as ig
 import matplotlib.pyplot as plt
 
-from SKC.workspace.obstacle import Obstacle
+from workspace.obstacle import Obstacle
 
 fig, ax = plt.subplots(figsize=(10, 10))
 ax.set_aspect('equal')
@@ -29,6 +29,8 @@ class Workspace:
         self.grid = 1
 
         self.points = {}
+        self.adjacency_point_list = {}
+        self.neighbor_coords = {}
         self.x_nom = None
         self.y_nom = None
 
@@ -40,14 +42,16 @@ class Workspace:
 
         if self.style == "boustro":
             self.generate_boustro_coordinates()
+            # self.compute_coord_to_index()
+            # self.init_boustro_neigh()
         elif self.style == "hilbert":
             self.generate_hilbert_coordinates()
+            # self.init_hilbert_neigh()
 
         # Add edges to the graph
         self.generate_waypoint_graph()
 
         # Add obstacle to the space
-        # obstacle_create = Obstacle(self.side_size, self.block_fraction, self.sparsity_order)
         self.obstacle_grid = self.obstacle.grid
         self.obstacles = self.get_blocked_waypoints(self.obstacle_grid)
 

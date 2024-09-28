@@ -16,6 +16,7 @@ class Obstacle:
         self.N = N
         self.blocked_fraction = blocked_fraction
         self.sparsity = sparsity
+        self.actual_sparsity = sparsity
 
         self.total_nodes = N * N
         self.B = int(round(self.total_nodes * blocked_fraction))  # Total number of blocked nodes
@@ -23,6 +24,7 @@ class Obstacle:
         self.components = []
 
         self.grid = self.generate_grid()
+        self.calculate_actual_sparsity()
 
     def generate_grid(self):
         """
@@ -57,6 +59,7 @@ class Obstacle:
         # Step 4: Distribute remaining blocked nodes
         R = B - C  # Remaining blocked nodes to place
         while R > 0:
+            progress_made = False
             for component in self.components:
                 if R == 0:
                     break
@@ -71,8 +74,14 @@ class Obstacle:
                     self.grid[x_new, y_new] = 1
                     component.append((x_new, y_new))
                     R -= 1
+                    progress_made = True
                 else:
                     continue  # No valid neighbors, skip to next component
+            if not progress_made:
+                # No progress can be made, cannot place remaining blocked nodes
+                print("Cannot place all blocked nodes with the given sparsity and 8-cell adjacency.")
+                break
+
         # Ensure the left-bottom-most element is unblocked
         self.grid[0, 0] = 0
         return self.grid
@@ -92,6 +101,7 @@ class Obstacle:
         grid = self.grid
         components = self.components
 
+        # 8-connectivity moves (including diagonals)
         moves = [(-1, -1), (-1, 0), (-1, 1),
                  (0, -1),          (0, 1),
                  (1, -1),  (1, 0), (1, 1)]
@@ -105,7 +115,8 @@ class Obstacle:
                     for other_component in components:
                         if other_component != component:
                             for x_c, y_c in other_component:
-                                if abs(x_c - x_new) <= 1 and abs(y_c - y_new) <= 1:
+                                # Check 8-connectivity for adjacency
+                                if max(abs(x_c - x_new), abs(y_c - y_new)) <= 1:
                                     adjacent_to_other = True
                                     break
                             if adjacent_to_other:
@@ -127,7 +138,7 @@ class Obstacle:
         plt.grid(True, which='both', linestyle='--', linewidth=0.5)
         plt.xticks(range(0, N+1, max(1, N // 10)))
         plt.yticks(range(0, N+1, max(1, N // 10)))
-        # plt.show()
+        plt.show()
 
     def calculate_actual_sparsity(self):
         """
@@ -136,29 +147,29 @@ class Obstacle:
         Returns:
         - actual_sparsity: The calculated sparsity value.
         """
-        B = self.B
+        B = np.sum(self.grid)
         grid = self.grid
         # Label connected components of blocked nodes
         structure = np.ones((3, 3), dtype=int)  # 8-connectivity
         labeled_grid, num_features = label(grid, structure=structure)
 
-        actual_sparsity = (num_features - 1) / (B - 1) if B > 1 else 1.0
+        self.actual_sparsity = (num_features - 1) / (B - 1) if B > 1 else 1.0
         print(f"Actual number of components: {num_features}")
-        print(f"Actual sparsity: {actual_sparsity:.2f}")
-        return actual_sparsity
+        print(f"Actual sparsity: {self.actual_sparsity:.2f}")
+        return self.actual_sparsity
 
 # Example usage
 if __name__ == "__main__":
     # Parameters
-    N = 20                 # Grid size (NxN)
+    N = 5                # Grid size (NxN)
     blocked_fraction = 0.25 # Fraction of grid nodes to be blocked (0 to 1)
-    sparsity = 0.5          # Desired sparsity level (between 0 to 1)
+    sparsity = 0.9         # Desired sparsity level (between 0 to 1)
 
     # Initialize the grid generator
     grid_gen = Obstacle(N, blocked_fraction, sparsity)
 
-    # Generate the grid
-    grid = grid_gen.generate_grid()
+    # The grid is already generated in __init__
+    grid = grid_gen.grid
     print(grid)
     # Visualize the grid
     grid_gen.visualize_grid()
