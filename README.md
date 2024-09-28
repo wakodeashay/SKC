@@ -1,6 +1,6 @@
 # This repository hosts code to implement coverage path planning for unstructured environments. #
 
-### - Steps to setup and run and example
+### Steps to setup and run and example
 #### 1. Install Conda using the official website. [Conda Installation on Linux](https://docs.conda.io/projects/conda/en/latest/user-guide/install/linux.html). Note : Use the instruction for your operating system.
 #### 2. Create a conda environment with Python 3.11.5
     ```
@@ -48,16 +48,16 @@
     conda deactivate SKC
     ```
 
-### - Codemap
+### Codemap
 
-#### main.py: Run examples using this script
+* main.py: Run examples using this script
 
-#### algorithms: This folder hosts source code for various coverage path planning strategies 
+* algorithms: This folder hosts source code for various coverage path planning strategies 
 
-#### docs: Hosts plots and illustrations
+* docs: Hosts plots and illustrations
 
-#### sensors: Hosts sensor model used by coverage path planning strategies
+* sensors: Hosts sensor model used by coverage path planning strategies
 
-#### workspace: Hosts script to create grid workspace with obstacles
+* workspace: Hosts script to create grid workspace with obstacles
 
-#### Illustrations folder contains illustrations used in the paper
+* Illustrations folder contains illustrations used in the paper
