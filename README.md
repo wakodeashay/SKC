@@ -11,7 +11,7 @@
 #### 3. Activate the conda environment
     ```
     cd SKC
-    conda create -f environment.yml
+    conda env  create -f environment.yml
     ```
 
 #### 4. Activate the conda environment a
