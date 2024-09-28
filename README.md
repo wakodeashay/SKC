@@ -21,12 +21,12 @@
 
 ## Run example
 
-#### 7. Run the code
+#### 1. Run the code
     ```
     python3 main.py
     ```
 
-#### 8. Deactivate the conda 
+#### 2. (Optional) Deactivate the conda 
     ```
     conda deactivate SKC
     ```
