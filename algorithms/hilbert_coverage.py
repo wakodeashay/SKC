@@ -10,9 +10,9 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 # Specify directory to save animation
 doc_anim_dir = os.path.abspath(os.path.join(current_dir, "../docs/animation"))
 
-fig, ax = plt.subplots(figsize=(10, 10))
-ax.set_aspect('equal')
-ax.set_axis_off()
+# fig, ax = plt.subplots(figsize=(10, 10))
+# ax.set_aspect('equal')
+# ax.set_axis_off()
 
 
 class HilbertRoute:
@@ -36,8 +36,8 @@ class HilbertRoute:
         self.obstacle_sensor = ObstacleSensor(self.detection_radius, self.workspace.obstacle_grid)
         self.get_alt_path_detection_level()
 
-        self.agent, = ax.plot([], [], 'o', color='blue')
-        self.path, = ax.plot([], [], 'g-', linewidth=5)
+        # self.agent, = ax.plot([], [], 'o', color='blue')
+        # self.path, = ax.plot([], [], 'g-', linewidth=5)
 
     def get_adjacency_list(self, v_list, obs_list):
         """Gives the Adjacency list"""
@@ -116,12 +116,13 @@ class HilbertRoute:
 
             self.sense_obstacle()
 
-        max_waypoint = max(self.points_visited)
-        final_path, _ = self.get_shortest_dist(self.points_visited[-1], max_waypoint)
-        if len(final_path) != 1:
-            self.points_visited.extend(final_path[1:])
-        else:
-            pass
+        # max_waypoint = max(self.points_visited)
+        # final_path, _ = self.get_shortest_dist(self.points_visited[-1], max_waypoint)
+        # if len(final_path) != 1:
+        #     # np.concatenate(self.points_visited, final_path[1:])
+        #     self.points_visited = np.concatenate((self.points_visited, final_path[1:]))
+        # else:
+        #     pass
 
         self.x_visited = [self.workspace.x_nom[i] for i in self.points_visited]
         self.y_visited = [self.workspace.y_nom[i] for i in self.points_visited]
@@ -162,11 +163,13 @@ class HilbertRoute:
         if self.plot_flag:
             plt.plot(self.x_visited, self.y_visited, linestyle="solid", color="green", linewidth=1.0)
             plt.show()
+            plt.close()
 
         if self.animate_flag:
             ani = animation.FuncAnimation(fig, self.motion_update, frames=len(self.x_visited),
                                           interval=100, blit=True)
             ani.save(os.path.join(doc_anim_dir, 'hilbert_animation.gif'), writer='ffmpeg', fps=5, dpi=300)
+            plt.close()
 
     def init(self):
         self.agent.set_data([], [])

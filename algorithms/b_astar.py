@@ -40,13 +40,13 @@ class BAStarRoute:
         self.bastar_complete = False
         self.get_alternate_path()
 
-        if plot_flag or animate_flag:
-            self.fig, self.ax = plt.subplots(figsize=(10, 10))
-            self.ax.set_aspect('equal')
-            self.ax.set_axis_off()
+        # if plot_flag or animate_flag:
+        # self.fig, self.ax = plt.subplots(figsize=(10, 10))
+        # self.ax.set_aspect('equal')
+        # self.ax.set_axis_off()
 
-        self.agent, = self.ax.plot([], [], 'o', color='blue')
-        self.path, = self.ax.plot([], [], 'g-', linewidth=5)
+        # self.agent, = self.ax.plot([], [], 'o', color='blue')
+        # self.path, = self.ax.plot([], [], 'g-', linewidth=5)
 
     def init_adjacency_and_neighbors(self):
         directions = ['east', 'north-east', 'north', 'north-west', 'west',
@@ -127,6 +127,7 @@ class BAStarRoute:
     def get_all_neighbors(self, point):
         """Outputs all the adjacent nodes of a given node"""
         return self.all_neighbors.get(point, {})
+    
     def b_value(self, point1, point2):
         if point1 not in self.obstacle_detected and point1 not in self.points_visited and point1 != -1 and (
                 point2 in self.obstacle_detected or point2 == -1):
@@ -219,13 +220,13 @@ class BAStarRoute:
 
         prev_len = sum(len(sublist) for sublist in self.overall_path)
         self.overall_path.append(self.points_visited[prev_len:])
-        max_waypoint = max(self.points_visited)
-        final_path, _ = self.get_shortest_dist(self.points_visited[-1], max_waypoint)
-        if len(final_path) != 1:
-            self.overall_path.append(final_path[1:])
-            self.points_visited.extend(final_path[1:])
-        else:
-            pass
+        # max_waypoint = max(self.points_visited)
+        # final_path, _ = self.get_shortest_dist(self.points_visited[-1], max_waypoint)
+        # if len(final_path) != 1:
+        #     self.overall_path.append(final_path[1:])
+        #     self.points_visited.extend(final_path[1:])
+        # else:
+        #     pass
 
     def plot_workspace(self):
         self.x_bound = [min(self.workspace.x_nom) - self.workspace.grid / 2,
@@ -287,11 +288,13 @@ class BAStarRoute:
             # Remove the axis and bounding box before showing the plot
             plt.gca().set_axis_off()
             plt.show()
+            plt.close()
 
         if self.animate_flag:
             ani = animation.FuncAnimation(fig, self.motion_update, frames=len(self.points_visited),
                                           interval=100, blit=True)
             ani.save(os.path.join(doc_anim_dir, 'bstar_animation.gif'), writer='ffmpeg', fps=5, dpi=300)
+            plt.close()
 
     def init(self):
         self.agent.set_data([], [])
